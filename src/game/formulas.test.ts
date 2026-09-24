@@ -2,8 +2,12 @@ import { GOALS } from './catalog'
 import { gradeDay } from './journal'
 import { nextAgenda } from './schedule'
 import { addDays } from './dates'
+import { isActive, listGoals } from './goals'
+import { monthOf, weekOf } from './periods'
+import { paceSplit, periodSync } from './reviews'
 import { derive } from './derive'
 import { formatSyncDelta, levelFromXp, percentColor, syncFromRatios, xpForProgress } from './formulas'
+import { allocate, basisTotal, categorySpent, debtBalance, defaultTemplate, emptyFinance, monthIncome, addEntry, babyStatus } from './finance'
 import { commit, createSave } from './reducer'
 
 const day = '2026-01-01'
@@ -138,5 +142,63 @@ describe('campaign actions', () => {
     save = commit(save, { type: 'complete-contract', contractId: 'body', date: day, at: at(day) }, day, at(day))
     const next = commit(save, { type: 'uncomplete-contract', contractId: 'body', date: day, today: addDays(day, 1) }, addDays(day, 1), at(day))
     expect(next).toBe(save)
+  })
+
+  it('maps campaign weeks and keeps the last five days in month 12', () => {
+    expect(weekOf('2026-09-24', 1)).toMatchObject({ week: 1, start: '2026-09-24', end: '2026-09-30' })
+    expect(weekOf('2026-09-24', 8).week).toBe(2)
+    expect(monthOf('2026-09-24', 365)).toMatchObject({ month: 12, endDay: 365 })
+  })
+
+  it('uses daily grades for period sync and contracts when none were submitted', () => {
+    expect(periodSync([{ id: 'a', date: '2026-09-24', reflection: '', tasksCompleted: 10, tasksExpected: 10, score: 80, grade: 'Good', createdAt: '' }, { id: 'b', date: '2026-09-25', reflection: '', tasksCompleted: 5, tasksExpected: 10, score: 40, grade: 'Behind', createdAt: '' }], '2026-09-24', '2026-09-30', 0, 7)).toBe(60)
+    expect(periodSync([], '2026-09-24', '2026-09-30', 3, 7)).toBeCloseTo((3 / 21) * 100)
+  })
+
+  it('drops a paused goal from the agenda and sync average without taking back xp', () => {
+    let save = createSave()
+    save.startedAt = day
+    const goal = GOALS.find((item) => item.id === 'establish-pos')!
+    save = commit(save, { type: 'toggle-subtask', goalId: goal.id, subtaskId: goal.subtasks[0].id, date: day, at: at(day) }, day, at(day))
+    const before = derive(save, day)
+    expect(before.xp).toBeGreaterThan(0)
+    const paused = commit(save, { type: 'set-goal-status', goalId: goal.id, state: 'paused', at: at(day), date: day }, day, at(day))
+    const after = derive(paused, day)
+    expect(after.xp).toBe(before.xp)
+    expect(after.sync).not.toBe(before.sync)
+    expect(isActive(paused, goal.id)).toBe(false)
+    const agenda = nextAgenda(paused.events, after.goalCurrent, 7, listGoals(paused).filter((item) => isActive(paused, item.id)))
+    expect(agenda.some((item) => item.goalId === goal.id)).toBe(false)
+    expect(paceSplit(paused, after.goalCurrent, 1).behind.some((item) => item.id === goal.id)).toBe(false)
+  })
+
+  it('allocates cents from basis points and keeps the default budget at 100%', () => {
+    expect(basisTotal(defaultTemplate())).toBe(10000)
+    expect(allocate(300000, 2827)).toBe(84810)
+    expect(allocate(300000, 1000)).toBe(30000)
+  })
+
+  it('keeps an August budget snapshot when September rates change', () => {
+    let finance = addEntry(emptyFinance(), { id: 'aug', type: 'income', amountCents: 100000, date: '2026-08-02', note: '' })
+    finance = addEntry(finance, { id: 'sep', type: 'income', amountCents: 200000, date: '2026-09-02', note: '' })
+    const august = { ...finance.months['2026-08'] }
+    finance = { ...finance, template: { ...finance.template, rent: 2000 }, months: { ...finance.months, '2026-09': { ...finance.template, rent: 2000 } } }
+    expect(finance.months['2026-08']).toEqual(august)
+    expect(monthIncome(finance, '2026-08')).toBe(100000)
+    expect(monthIncome(finance, '2026-09')).toBe(200000)
+  })
+
+  it('reduces only the spent category and the debt balance', () => {
+    let save = createSave()
+    save = commit(save, { type: 'add-ledger', at: at(day), entry: { id: 'in', type: 'income', amountCents: 300000, date: day, note: '' } }, day, at(day))
+    save = commit(save, { type: 'add-ledger', at: at(day), entry: { id: 'rent', type: 'expense', amountCents: 70000, date: day, note: '', categoryId: 'rent' } }, day, at(day))
+    expect(categorySpent(save.finance, '2026-01', 'rent')).toBe(70000)
+    expect(categorySpent(save.finance, '2026-01', 'gas')).toBe(0)
+    save = commit(save, { type: 'add-debt', at: at(day), date: day, debt: { id: 'card', name: 'Card', balanceCents: 250000, minimumCents: 7500, order: 0 } }, day, at(day))
+    save = commit(save, { type: 'pay-debt', debtId: 'card', amountCents: 5000, date: day, at: at(day) }, day, at(day))
+    expect(debtBalance(save.finance.debts[0], save.finance.debtPayments)).toBe(245000)
+    save = commit(save, { type: 'set-emergency', amountCents: 100000, essentialCents: 200000, targetMonths: 3, at: at(day), date: day }, day, at(day))
+    expect(babyStatus(save.finance).step1).toBe(true)
+    expect(save.events.some((event) => event.type === 'baby-step' && event.xp === 100)).toBe(true)
   })
 })

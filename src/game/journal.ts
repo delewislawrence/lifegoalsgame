@@ -1,7 +1,17 @@
 import type { AgendaRef } from './schedule'
+import type { ContractId } from './types'
 
 export const JOURNAL_KEY = 'animus-journal-v1'
 export const DAY_TASKS = 10
+
+export interface DaySnapshot {
+  contracts: Record<ContractId, boolean>
+  questsDone: string[]
+  questsOpen: string[]
+  xp: number
+  sync: number
+  streak: number
+}
 
 export interface DayEntry {
   id: string
@@ -12,6 +22,7 @@ export interface DayEntry {
   score: number
   grade: string
   createdAt: string
+  snapshot?: DaySnapshot
 }
 
 export interface Journal {
@@ -20,6 +31,8 @@ export interface Journal {
   agenda: AgendaRef[]
   entries: DayEntry[]
 }
+
+export const GRADE_SCORES = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0] as const
 
 const GRADES: Record<number, string> = {
   100: 'Perfect',
@@ -37,6 +50,11 @@ const GRADES: Record<number, string> = {
 
 export function emptyJournal(date: string): Journal {
   return { version: 1, agendaDate: date, agenda: [], entries: [] }
+}
+
+export function gradeName(score: number): string {
+  const stepped = Math.round(Math.max(0, Math.min(100, score)) / 10) * 10
+  return GRADES[stepped] ?? 'Missed'
 }
 
 export function gradeDay(tasksCompleted: number, tasksExpected = DAY_TASKS): { score: number; grade: string } {

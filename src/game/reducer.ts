@@ -4,7 +4,10 @@ import { BONUS_XP, CONTRACTS, GOAL_BY_ID, GOALS, contractById, isChecklist } fro
 import { derive, goalXpDelta } from './derive'
 import { localDate } from './dates'
 import { campaignStart } from './formulas'
-import type { CampaignArchive, ContractId, ContractText, GameEvent, Save } from './types'
+import { reviewKey } from './periods'
+import { resolveGoal } from './goals'
+import { addEntry, babyStatus, emptyFinance, stampBaby } from './finance'
+import type { CampaignArchive, ContractId, ContractText, CustomGoal, Debt, FinanceState, GameEvent, GoalLife, LedgerEntry, ReviewRecord, Save } from './types'
 
 export type Action =
   | { type: 'complete-contract'; contractId: ContractId; date: string; at: string }
@@ -16,6 +19,17 @@ export type Action =
   | { type: 'import-save'; save: Save }
   | { type: 'reset-campaign'; at: string; date: string }
   | { type: 'begin-next-year'; at: string; date: string }
+  | { type: 'save-review'; review: ReviewRecord }
+  | { type: 'set-goal-status'; goalId: string; state: GoalLife; note?: string; title?: string; at: string; date: string }
+  | { type: 'add-custom-goal'; goal: CustomGoal; at: string; date: string }
+  | { type: 'add-ledger'; entry: LedgerEntry; at: string }
+  | { type: 'replace-ledger'; id: string; entry: LedgerEntry; at: string }
+  | { type: 'delete-ledger'; id: string; at: string; date: string }
+  | { type: 'save-budget'; month: string; rates: Record<string, number>; at: string; date: string }
+  | { type: 'add-debt'; debt: Debt; at: string; date: string }
+  | { type: 'pay-debt'; debtId: string; amountCents: number; date: string; at: string }
+  | { type: 'set-emergency'; amountCents: number; essentialCents: number; targetMonths: number; at: string; date: string }
+  | { type: 'clear-debts'; at: string; date: string }
 
 function uid(): string {
   return crypto.randomUUID()
@@ -36,6 +50,10 @@ export function createSave(now = new Date()): Save {
     events: [],
     achievementUnlocks: {},
     history: [],
+    reviews: [],
+    goalStatus: {},
+    customGoals: [],
+    finance: emptyFinance(),
   }
 }
 
@@ -88,6 +106,19 @@ function maybeBonus(events: GameEvent[], date: string, at: string): GameEvent[] 
   return events
 }
 
+function commitFinance(save: Save, finance: FinanceState, event: GameEvent): Save {
+  const before = babyStatus(save.finance)
+  const next = stampBaby(finance)
+  const after = babyStatus(next)
+  const events = [...save.events, event]
+  for (const step of [1, 2, 3] as const) {
+    if (!before[`step${step}`] && after[`step${step}`]) {
+      events.push({ id: uid(), type: 'baby-step', at: event.at, date: event.date, xp: 100, note: String(step) })
+    }
+  }
+  return { ...save, finance: next, events }
+}
+
 export function reduce(save: Save, action: Action): Save {
   switch (action.type) {
     case 'complete-contract': {
@@ -115,14 +146,14 @@ export function reduce(save: Save, action: Action): Save {
       return { ...save, events }
     }
     case 'log-goal': {
-      const goal = GOAL_BY_ID[action.goalId]
+      const goal = resolveGoal(save, action.goalId)
       if (!goal || isChecklist(goal)) return save
       const events = withGoalProgress([...save.events], action.goalId, action.amount, action.date, action.at)
       if (events.length === save.events.length) return save
       return { ...save, events }
     }
     case 'toggle-subtask': {
-      const goal = GOAL_BY_ID[action.goalId]
+      const goal = resolveGoal(save, action.goalId)
       const step = goal?.subtasks.find((item) => item.id === action.subtaskId)
       if (!goal || !step || !isChecklist(goal)) return save
       const exists = save.events.some((event) => event.goalId === goal.id && event.subtaskId === step.id)
@@ -169,6 +200,90 @@ export function reduce(save: Save, action: Action): Save {
     }
     case 'import-save':
       return action.save
+    case 'save-review': {
+      const key = reviewKey(action.review.kind, action.review.period)
+      const existing = save.reviews.find((review) => reviewKey(review.kind, review.period) === key)
+      const reviews = existing
+        ? save.reviews.map((review) => (review.id === existing.id ? { ...action.review, id: existing.id } : review))
+        : [...save.reviews, action.review]
+      if (existing) return { ...save, reviews }
+      const eventType = `${action.review.kind}-review` as GameEvent['type']
+      return {
+        ...save,
+        reviews,
+        events: [...save.events, { id: uid(), type: eventType, at: action.review.updatedAt, date: action.review.updatedAt.slice(0, 10), xp: 0, reviewId: action.review.id }],
+      }
+    }
+    case 'set-goal-status': {
+      const previous = save.goalStatus[action.goalId]
+      const goalStatus = { ...save.goalStatus, [action.goalId]: { state: action.state, note: action.note ?? previous?.note, title: action.title ?? previous?.title } }
+      const type: GameEvent['type'] = action.state === 'paused' ? 'goal-paused' : action.state === 'removed' ? 'goal-removed' : 'goal-modified'
+      return {
+        ...save,
+        goalStatus,
+        events: [...save.events, { id: uid(), type, at: action.at, date: action.date, xp: 0, goalId: action.goalId, note: action.note }],
+      }
+    }
+    case 'add-custom-goal': {
+      if (save.customGoals.some((goal) => goal.id === action.goal.id)) return save
+      return {
+        ...save,
+        customGoals: [...save.customGoals, action.goal],
+        events: [...save.events, { id: uid(), type: 'goal-created', at: action.at, date: action.date, xp: 0, goalId: action.goal.id, note: action.goal.title }],
+      }
+    }
+    case 'add-ledger': {
+      const xp = action.entry.type === 'income' ? 10 : 5
+      const type = action.entry.type === 'income' ? 'income' : 'expense'
+      return commitFinance(save, addEntry(save.finance, action.entry), {
+        id: uid(), type, at: action.at, date: action.entry.date, xp, note: action.entry.note, amount: action.entry.amountCents,
+      })
+    }
+    case 'replace-ledger': {
+      const previous = save.finance.entries.find((entry) => entry.id === action.id)
+      if (!previous) return save
+      const entries = save.finance.entries.filter((entry) => entry.id !== action.id)
+      return commitFinance(save, addEntry({ ...save.finance, entries }, action.entry), {
+        id: uid(), type: 'ledger-correction', at: action.at, date: action.entry.date, xp: 0, note: action.id,
+      })
+    }
+    case 'delete-ledger': {
+      if (!save.finance.entries.some((entry) => entry.id === action.id)) return save
+      return commitFinance(save, { ...save.finance, entries: save.finance.entries.filter((entry) => entry.id !== action.id) }, {
+        id: uid(), type: 'ledger-correction', at: action.at, date: action.date, xp: 0, note: action.id,
+      })
+    }
+    case 'save-budget': {
+      const months = { ...save.finance.months, [action.month]: { ...action.rates } }
+      const template = { ...action.rates }
+      return commitFinance(save, { ...save.finance, months, template }, {
+        id: uid(), type: 'budget-edit', at: action.at, date: action.date, xp: 10, note: action.month,
+      })
+    }
+    case 'add-debt': {
+      return { ...save, finance: { ...save.finance, debts: [...save.finance.debts, action.debt] }, events: [...save.events, { id: uid(), type: 'ledger-correction', at: action.at, date: action.date, xp: 0, note: action.debt.name }] }
+    }
+    case 'pay-debt': {
+      const debt = save.finance.debts.find((item) => item.id === action.debtId)
+      if (!debt || action.amountCents <= 0) return save
+      const payment = { id: uid(), debtId: action.debtId, amountCents: action.amountCents, date: action.date }
+      const expense: LedgerEntry = { id: uid(), type: 'expense', amountCents: action.amountCents, date: action.date, note: debt.name, categoryId: 'debt-snowball' }
+      const finance = addEntry({ ...save.finance, debtPayments: [...save.finance.debtPayments, payment] }, expense)
+      return commitFinance(save, finance, { id: uid(), type: 'debt-payment', at: action.at, date: action.date, xp: 15, amount: action.amountCents, note: debt.name })
+    }
+    case 'set-emergency': {
+      const delta = action.amountCents - save.finance.emergency.amountCents
+      let finance: FinanceState = { ...save.finance, emergency: { amountCents: action.amountCents, essentialCents: action.essentialCents, targetMonths: action.targetMonths } }
+      if (delta > 0) {
+        finance = addEntry(finance, { id: uid(), type: 'expense', amountCents: delta, date: action.date, note: 'Emergency fund', categoryId: 'emergency-fund' })
+      }
+      return commitFinance(save, finance, { id: uid(), type: 'emergency-update', at: action.at, date: action.date, xp: 5, amount: action.amountCents })
+    }
+    case 'clear-debts': {
+      return commitFinance(save, { ...save.finance, baby: { ...save.finance.baby, step2Clear: true } }, {
+        id: uid(), type: 'ledger-correction', at: action.at, date: action.date, xp: 0, note: 'debts-clear',
+      })
+    }
     case 'reset-campaign':
       return {
         ...createSave(new Date(action.at)),

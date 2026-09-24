@@ -5,6 +5,7 @@ import { formatSyncDelta } from '../game/formulas'
 import { commit, type Action } from '../game/reducer'
 import { playFeedback } from '../game/sound'
 import { gradeDay, loadJournal, mergeJournal, persistJournal, type DayEntry, type Journal } from '../game/journal'
+import { isActive, listGoals } from '../game/goals'
 import { nextAgenda, stepDone } from '../game/schedule'
 import { loadSave, persistSave } from '../game/storage'
 import { localDate } from '../game/dates'
@@ -71,7 +72,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setJournal((current) => {
       if (current.agendaDate === today && current.agenda.length > 0) return current
-      const agenda = nextAgenda(save.events, derive(save, today).goalCurrent)
+      const agenda = nextAgenda(save.events, derive(save, today).goalCurrent, 7, listGoals(save).filter((goal) => isActive(save, goal.id)))
       if (current.agendaDate === today && agenda.length === 0) return current
       return { ...current, agendaDate: today, agenda }
     })
@@ -101,11 +102,26 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }
 
   const submitDay = (reflection: string) => {
-    const snapshot = derive(saveRef.current, today)
-    const steps = journal.agenda.filter((item) => stepDone(saveRef.current.events, item.goalId, item.subtaskId, snapshot.goalCurrent[item.goalId] ?? 0)).length
-    const tasksCompleted = snapshot.todayCount + steps
+    const previous = saveRef.current
+    const snapshot = derive(previous, today)
+    const goals = listGoals(previous)
+    const steps = journal.agenda.filter((item) => stepDone(previous.events, item.goalId, item.subtaskId, snapshot.goalCurrent[item.goalId] ?? 0, goals))
+    const tasksCompleted = snapshot.todayCount + steps.length
     const tasksExpected = 3 + journal.agenda.length
     const graded = gradeDay(tasksCompleted, tasksExpected)
+    const xp = previous.events.filter((event) => event.date === today).reduce((sum, event) => sum + event.xp, 0)
+    const label = (item: { goalId: string; subtaskId: string }) => {
+      const goal = goals.find((candidate) => candidate.id === item.goalId)
+      return goal?.subtasks.find((step) => step.id === item.subtaskId)?.title ?? item.subtaskId
+    }
+    const daySnapshot = {
+      contracts: snapshot.todayDone,
+      questsDone: steps.map(label),
+      questsOpen: journal.agenda.filter((item) => !steps.includes(item)).map(label),
+      xp,
+      sync: snapshot.sync,
+      streak: snapshot.streak,
+    }
     setJournal((current) => {
       const existing = current.entries.find((entry) => entry.date === today)
       const entry: DayEntry = {
@@ -117,6 +133,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         score: graded.score,
         grade: graded.grade,
         createdAt: existing?.createdAt ?? new Date().toISOString(),
+        snapshot: daySnapshot,
       }
       const entries = existing
         ? current.entries.map((item) => (item.date === today ? entry : item))

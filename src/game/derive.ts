@@ -1,4 +1,5 @@
 import { CONTRACTS, GOAL_BY_ID, GOALS, SKILL_PATHS, isChecklist, sequenceById } from './catalog'
+import { isActive, listGoals } from './goals'
 import { addDays } from './dates'
 import {
   average,
@@ -45,11 +46,21 @@ function goalCurrents(events: GameEvent[]): Record<string, number> {
       if (event.subtaskId) checks.get(goal.id)?.add(event.subtaskId)
       continue
     }
+    if (!goal && event.subtaskId) {
+      const set = checks.get(event.goalId) ?? new Set<string>()
+      set.add(event.subtaskId)
+      checks.set(event.goalId, set)
+      continue
+    }
     totals[event.goalId] = (totals[event.goalId] ?? 0) + (event.amount ?? 0)
   }
   for (const goal of GOALS) {
     const current = isChecklist(goal) ? checks.get(goal.id)?.size ?? 0 : totals[goal.id] ?? 0
     totals[goal.id] = Math.min(goal.target, Math.max(0, current))
+  }
+  for (const [id, set] of checks) {
+    if (GOAL_BY_ID[id]) continue
+    totals[id] = Math.min(1, set.size)
   }
   return totals
 }
@@ -97,7 +108,11 @@ function daysBetweenSafe(start: string, end: string): number {
 
 export function derive(save: Save, today: string): View {
   const goalCurrent = goalCurrents(save.events)
-  const ratios = GOALS.map((goal) => ratio(goalCurrent[goal.id] ?? 0, goal.target))
+  for (const goal of save.customGoals ?? []) {
+    if (goalCurrent[goal.id] === undefined) goalCurrent[goal.id] = 0
+  }
+  const active = listGoals(save).filter((goal) => isActive(save, goal.id))
+  const ratios = active.map((goal) => ratio(goalCurrent[goal.id] ?? 0, goal.target))
   const sync = syncFromRatios(ratios)
   const xp = save.events.reduce((sum, event) => sum + event.xp, 0)
   const todayDone = {
@@ -120,13 +135,13 @@ export function derive(save: Save, today: string): View {
     master: 0,
   } as Record<SequenceId, number>
   for (const sequence of ['awakening', 'apprentice', 'assassin', 'master'] as SequenceId[]) {
-    const goals = GOALS.filter((goal) => goal.sequenceId === sequence)
+    const goals = active.filter((goal) => goal.sequenceId === sequence)
     sequenceProgress[sequence] = average(goals.map((goal) => ratio(goalCurrent[goal.id] ?? 0, goal.target))) * 100
   }
   const skillProgress = {} as Record<SkillPathId, number>
   for (const path of SKILL_PATHS) {
     if (path.id === 'character') continue
-    const goals = GOALS.filter((goal) => goal.skillPathId === path.id)
+    const goals = active.filter((goal) => goal.skillPathId === path.id)
     skillProgress[path.id] = average(goals.map((goal) => ratio(goalCurrent[goal.id] ?? 0, goal.target))) * 100
   }
   const others = SKILL_PATHS.filter((path) => path.id !== 'character').map((path) => skillProgress[path.id])
@@ -157,6 +172,10 @@ export function derive(save: Save, today: string): View {
 
 export function goalXpDelta(goalId: string, before: number, after: number): number {
   const goal = GOAL_BY_ID[goalId]
-  if (!goal) return 0
+  if (!goal) {
+    if (before <= 0 && after > 0) return 50
+    if (before > 0 && after <= 0) return -50
+    return 0
+  }
   return xpForProgress(goal.xpReward, goal.target, after) - xpForProgress(goal.xpReward, goal.target, before)
 }

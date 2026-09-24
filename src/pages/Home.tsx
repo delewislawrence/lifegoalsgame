@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CONTRACTS, GOAL_BY_ID } from '../game/catalog'
 import { formatLongDate } from '../game/dates'
+import { dueReview } from '../game/periods'
 import { formatSync, percentColor } from '../game/formulas'
 import { stepDone } from '../game/schedule'
 import ProgressBar from '../components/ProgressBar'
@@ -10,6 +11,7 @@ import { useGame } from '../state/GameProvider'
 export default function Home() {
   const { save, view, today, journal, dispatch, submitDay } = useGame()
   const todayEntry = journal.entries.find((entry) => entry.date === today)
+  const due = dueReview(save.startedAt, today, save.reviews ?? [], view.campaignDay)
   const [reflection, setReflection] = useState(todayEntry?.reflection ?? '')
   return (
     <>
@@ -28,6 +30,7 @@ export default function Home() {
       <p className="meta">
         {formatLongDate(today)} · {view.campaignDay < 1 ? `Day 1 begins ${formatLongDate(save.startedAt)}` : `Day ${view.campaignDay}`}
       </p>
+      {due ? <p className="section"><Link className="btn" to="/review">{due.label}</Link></p> : null}
 
       <section className="section">
         <div className="row-between">
@@ -93,7 +96,10 @@ export default function Home() {
             <button className="btn solid" type="submit">{todayEntry ? 'Update day' : 'Submit day'}</button>
           </div>
           {todayEntry ? (
-            <p className="seal"><span style={{ color: percentColor(todayEntry.score) }}>{todayEntry.score}</span> — {todayEntry.grade} · {todayEntry.tasksCompleted}/{todayEntry.tasksExpected}</p>
+            <>
+              <p className="seal"><span style={{ color: percentColor(todayEntry.score) }}>{todayEntry.score}</span> — {todayEntry.grade} · {todayEntry.tasksCompleted}/{todayEntry.tasksExpected}</p>
+              <p className="meta">Tomorrow keeps the same Body, Mind, and Inner Temple contracts. The next 7 steps refresh when the date changes.</p>
+            </>
           ) : null}
           <p className="meta"><Link to="/days">All days</Link></p>
         </form>

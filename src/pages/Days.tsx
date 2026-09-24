@@ -19,6 +19,14 @@ export default function Days() {
           <p className="kicker">{formatLongDate(entry.date)}</p>
           <h3><span style={{ color: percentColor(entry.score) }}>{entry.score}</span> — {entry.grade}</h3>
           <p>{entry.tasksCompleted} / {entry.tasksExpected} tasks</p>
+          {entry.snapshot ? (
+            <>
+              <p>Body {entry.snapshot.contracts.body ? 'done' : 'open'} · Mind {entry.snapshot.contracts.mind ? 'done' : 'open'} · Inner Temple {entry.snapshot.contracts['inner-temple'] ? 'done' : 'open'}</p>
+              <p>Quests done: {entry.snapshot.questsDone.length ? entry.snapshot.questsDone.join(', ') : 'none'}</p>
+              <p>Quests open: {entry.snapshot.questsOpen.length ? entry.snapshot.questsOpen.join(', ') : 'none'}</p>
+              <p>{entry.snapshot.xp} XP · Sync {Math.round(entry.snapshot.sync)}% · Streak {entry.snapshot.streak}</p>
+            </>
+          ) : null}
           <p>{entry.reflection || 'No reflection written.'}</p>
           {pendingId === entry.id ? (
             <div className="button-row">

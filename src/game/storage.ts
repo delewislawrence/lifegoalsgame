@@ -1,6 +1,18 @@
+import { emptyFinance } from './finance'
 import { campaignStart } from './formulas'
 import { createSave } from './reducer'
 import type { Save } from './types'
+
+export function normalizeSave(save: Save): Save {
+  return {
+    ...save,
+    startedAt: campaignStart(save.startedAt),
+    reviews: Array.isArray(save.reviews) ? save.reviews : [],
+    goalStatus: save.goalStatus && typeof save.goalStatus === 'object' ? save.goalStatus : {},
+    customGoals: Array.isArray(save.customGoals) ? save.customGoals : [],
+    finance: save.finance?.entries && save.finance.template ? save.finance : emptyFinance(),
+  }
+}
 
 export const SAVE_KEY = 'animus-save-v1'
 
@@ -12,7 +24,7 @@ export function loadSave(): Save {
     if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.events) || !parsed.startedAt) {
       return createSave()
     }
-    return { ...parsed, startedAt: campaignStart(parsed.startedAt) }
+    return normalizeSave(parsed)
   } catch {
     return createSave()
   }
@@ -34,7 +46,7 @@ export function parseSave(raw: string): Save | null {
       return null
     }
     if (!parsed.contracts || !parsed.achievementUnlocks || !Array.isArray(parsed.history)) return null
-    return parsed
+    return normalizeSave(parsed)
   } catch {
     return null
   }
