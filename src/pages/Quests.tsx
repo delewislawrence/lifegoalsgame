@@ -48,7 +48,7 @@ export default function Quests() {
             <Link key={goal.id} className="quest-link" to={`/quests/${goal.id}`}>
               <p className="kicker">{goal.category} · {skillById(goal.skillPathId).name}</p>
               <strong>{goal.title}</strong>
-              <p>{goal.type === 'checkbox' ? (current >= goal.target ? 'Complete' : 'Incomplete') : `${current} / ${goal.target} ${goal.unit}`}</p>
+              <p>{goal.target === 1 ? (current >= goal.target ? 'Complete' : 'Incomplete') : `${current} / ${goal.target} ${goal.unit}`}</p>
               <p>{goal.xpReward} XP · {current >= goal.target ? 'Complete' : current > 0 ? 'In progress' : 'Not started'}</p>
               <ProgressBar value={pct} />
             </Link>

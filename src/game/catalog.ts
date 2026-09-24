@@ -1,3 +1,4 @@
+import { SUBTASKS } from './subtasks'
 import type { ContractDefinition, GoalDefinition, SequenceId, SkillPathId } from './types'
 
 export const BONUS_XP = 40
@@ -63,7 +64,13 @@ export const CONTRACTS: ContractDefinition[] = [
   },
 ]
 
-export const GOALS: GoalDefinition[] = [
+const STEP_UNITS = new Set([
+  'system', 'start', 'routine', 'plan', 'document', 'practice', 'course', 'site', 'pursuit',
+  'milestone', 'release', 'performance', 'foundation', 'manuscript', 'film', 'bond', 'challenge',
+  'client', 'business',
+])
+
+const GOAL_SEEDS: Omit<GoalDefinition, 'subtasks'>[] = [
   { id: 'establish-pos', title: 'Establish Personal Operating System', description: 'Stand up the system you will actually run this year.', category: 'Admin', type: 'checkbox', target: 1, unit: 'system', xpReward: 250, skillPathId: 'hidden-bureau', sequenceId: 'awakening' },
   { id: 'begin-coding', title: 'Begin coding practice', description: 'Start the daily practice that leads to the course.', category: 'Education', type: 'checkbox', target: 1, unit: 'start', xpReward: 150, skillPathId: 'stealth', sequenceId: 'awakening' },
   { id: 'begin-martial-arts', title: 'Begin martial arts', description: 'Step on the mat and make it a practice.', category: 'Body', type: 'checkbox', target: 1, unit: 'start', xpReward: 150, skillPathId: 'combat', sequenceId: 'awakening' },
@@ -92,7 +99,7 @@ export const GOALS: GoalDefinition[] = [
   { id: 'confidence', title: 'Improve confidence', description: 'Act before the feeling arrives.', category: 'Intimacy', type: 'checkbox', target: 1, unit: 'practice', xpReward: 200, skillPathId: 'intimacy', sequenceId: 'apprentice' },
 
   { id: 'deploy-projects', title: 'Deploy 3 software projects', description: 'Put three real things on the internet.', category: 'Education', type: 'counter', target: 3, unit: 'deploys', xpReward: 600, skillPathId: 'stealth', sequenceId: 'assassin' },
-  { id: 'income-tiers', title: 'Progress through 4 income tiers', description: 'Move the number that pays for the life.', category: 'Finance', type: 'counter', target: 4, unit: 'tiers', xpReward: 400, skillPathId: 'economic', sequenceId: 'assassin' },
+  { id: 'income-tiers', title: 'Progress through 4 income tiers', description: 'Four steps from a written baseline to income that covers your number.', category: 'Finance', type: 'counter', target: 4, unit: 'tiers', xpReward: 400, skillPathId: 'economic', sequenceId: 'assassin' },
   { id: 'income-increase', title: 'Increase income', description: 'Record a real rise in what you earn.', category: 'Finance', type: 'checkbox', target: 1, unit: 'milestone', xpReward: 400, skillPathId: 'economic', sequenceId: 'assassin' },
   { id: 'paying-client', title: 'Acquire first paying client', description: 'Someone pays you for the work.', category: 'Business', type: 'checkbox', target: 1, unit: 'client', xpReward: 500, skillPathId: 'economic', sequenceId: 'assassin' },
   { id: 'launch-business', title: 'Launch an income-producing business', description: 'Open something that can pay you back.', category: 'Business', type: 'checkbox', target: 1, unit: 'business', xpReward: 800, skillPathId: 'economic', sequenceId: 'assassin' },
@@ -132,6 +139,22 @@ export const GOALS: GoalDefinition[] = [
   { id: 'experiences', title: 'Collect 100 new experiences', description: 'One hundred things you had never done.', category: 'Fun', type: 'collection', target: 100, unit: 'experiences', xpReward: 800, skillPathId: 'play', sequenceId: 'master', headline: true },
   { id: 'deep-work-days', title: 'Log 200 deep work days', description: 'The Mind contract writes one day here.', category: 'Education', type: 'time', target: 200, unit: 'days', xpReward: 600, skillPathId: 'stealth', sequenceId: 'master', headline: true },
 ]
+
+export function isChecklist(goal: GoalDefinition): boolean {
+  return goal.subtasks.length > 0 && goal.subtasks.every((step) => step.at === undefined)
+}
+
+export const GOALS: GoalDefinition[] = GOAL_SEEDS.map((goal) => {
+  const subtasks = SUBTASKS[goal.id]
+  if (!subtasks?.length) throw new Error(`Missing steps for ${goal.id}`)
+  const checklist = subtasks.every((step) => step.at === undefined)
+  return {
+    ...goal,
+    subtasks,
+    target: checklist ? subtasks.length : goal.target,
+    unit: checklist && STEP_UNITS.has(goal.unit) ? 'steps' : goal.unit,
+  }
+})
 
 export const GOAL_BY_ID = Object.fromEntries(GOALS.map((goal) => [goal.id, goal]))
 

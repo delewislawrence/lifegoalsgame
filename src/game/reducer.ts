@@ -1,6 +1,6 @@
 import { applyAchievements } from './achievements'
 import { ACHIEVEMENTS } from './achievements'
-import { BONUS_XP, CONTRACTS, GOAL_BY_ID, GOALS, contractById } from './catalog'
+import { BONUS_XP, CONTRACTS, GOAL_BY_ID, GOALS, contractById, isChecklist } from './catalog'
 import { derive, goalXpDelta } from './derive'
 import { localDate } from './dates'
 import type { CampaignArchive, ContractId, ContractText, GameEvent, Save } from './types'
@@ -9,6 +9,8 @@ export type Action =
   | { type: 'complete-contract'; contractId: ContractId; date: string; at: string }
   | { type: 'uncomplete-contract'; contractId: ContractId; date: string; today: string }
   | { type: 'log-goal'; goalId: string; amount: number; date: string; at: string }
+  | { type: 'toggle-subtask'; goalId: string; subtaskId: string; date: string; at: string }
+  | { type: 'undo-last-log'; goalId: string }
   | { type: 'update-settings'; playerName?: string; sound?: boolean; contracts?: Partial<Record<ContractId, ContractText>> }
   | { type: 'import-save'; save: Save }
   | { type: 'reset-campaign'; at: string; date: string }
@@ -62,6 +64,16 @@ function withGoalProgress(events: GameEvent[], goalId: string, amount: number, d
   return events
 }
 
+function rebalanceChecklist(events: GameEvent[], goalId: string): GameEvent[] {
+  let current = 0
+  return events.map((event) => {
+    if (event.type !== 'goal-progress' || event.goalId !== goalId || !event.subtaskId) return event
+    const before = current
+    current += 1
+    return { ...event, amount: 1, xp: goalXpDelta(goalId, before, current) }
+  })
+}
+
 function maybeBonus(events: GameEvent[], date: string, at: string): GameEvent[] {
   const done = new Set(events.filter((event) => event.type === 'contract' && event.date === date).map((event) => event.contractId))
   const complete = CONTRACTS.every((contract) => done.has(contract.id))
@@ -102,9 +114,38 @@ export function reduce(save: Save, action: Action): Save {
       return { ...save, events }
     }
     case 'log-goal': {
+      const goal = GOAL_BY_ID[action.goalId]
+      if (!goal || isChecklist(goal)) return save
       const events = withGoalProgress([...save.events], action.goalId, action.amount, action.date, action.at)
       if (events.length === save.events.length) return save
       return { ...save, events }
+    }
+    case 'toggle-subtask': {
+      const goal = GOAL_BY_ID[action.goalId]
+      const step = goal?.subtasks.find((item) => item.id === action.subtaskId)
+      if (!goal || !step || !isChecklist(goal)) return save
+      const exists = save.events.some((event) => event.goalId === goal.id && event.subtaskId === step.id)
+      const events = exists
+        ? save.events.filter((event) => !(event.goalId === goal.id && event.subtaskId === step.id))
+        : [...save.events, {
+            id: uid(),
+            type: 'goal-progress' as const,
+            at: action.at,
+            date: action.date,
+            xp: 0,
+            goalId: goal.id,
+            amount: 1,
+            subtaskId: step.id,
+          }]
+      return { ...save, events: rebalanceChecklist(events, goal.id) }
+    }
+    case 'undo-last-log': {
+      let index = -1
+      save.events.forEach((event, eventIndex) => {
+        if (event.type === 'goal-progress' && event.goalId === action.goalId && !event.parentId && !event.subtaskId) index = eventIndex
+      })
+      if (index < 0) return save
+      return { ...save, events: save.events.filter((_, eventIndex) => eventIndex !== index) }
     }
     case 'update-settings': {
       const contracts = { ...save.contracts }

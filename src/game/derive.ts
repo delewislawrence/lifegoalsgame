@@ -1,4 +1,4 @@
-import { CONTRACTS, GOAL_BY_ID, GOALS, SKILL_PATHS, sequenceById } from './catalog'
+import { CONTRACTS, GOAL_BY_ID, GOALS, SKILL_PATHS, isChecklist, sequenceById } from './catalog'
 import { addDays } from './dates'
 import {
   average,
@@ -33,13 +33,23 @@ export interface View {
 
 function goalCurrents(events: GameEvent[]): Record<string, number> {
   const totals: Record<string, number> = {}
-  for (const goal of GOALS) totals[goal.id] = 0
+  const checks = new Map<string, Set<string>>()
+  for (const goal of GOALS) {
+    totals[goal.id] = 0
+    if (isChecklist(goal)) checks.set(goal.id, new Set())
+  }
   for (const event of events) {
     if (event.type !== 'goal-progress' || !event.goalId) continue
+    const goal = GOAL_BY_ID[event.goalId]
+    if (goal && isChecklist(goal)) {
+      if (event.subtaskId) checks.get(goal.id)?.add(event.subtaskId)
+      continue
+    }
     totals[event.goalId] = (totals[event.goalId] ?? 0) + (event.amount ?? 0)
   }
   for (const goal of GOALS) {
-    totals[goal.id] = Math.min(goal.target, Math.max(0, totals[goal.id] ?? 0))
+    const current = isChecklist(goal) ? checks.get(goal.id)?.size ?? 0 : totals[goal.id] ?? 0
+    totals[goal.id] = Math.min(goal.target, Math.max(0, current))
   }
   return totals
 }

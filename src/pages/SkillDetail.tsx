@@ -36,7 +36,7 @@ export default function SkillDetail() {
         return (
           <Link key={goal.id} className="quest-link" to={`/quests/${goal.id}`}>
             <strong>{goal.title}</strong>
-            <p>{goal.type === 'checkbox' ? (current >= goal.target ? 'Complete' : 'Incomplete') : `${current} / ${goal.target} ${goal.unit}`}</p>
+            <p>{goal.target === 1 ? (current >= goal.target ? 'Complete' : 'Incomplete') : `${current} / ${goal.target} ${goal.unit}`}</p>
             <ProgressBar value={(current / goal.target) * 100} />
           </Link>
         )

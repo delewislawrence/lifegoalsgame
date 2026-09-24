@@ -1,0 +1,270 @@
+import type { Subtask } from './types'
+
+function steps(id: string, titles: string[]): Subtask[] {
+  return titles.map((title, index) => ({ id: `${id}-${index + 1}`, title }))
+}
+
+function series(id: string, label: string, count: number): Subtask[] {
+  return Array.from({ length: count }, (_, index) => ({
+    id: `${id}-${index + 1}`,
+    title: `${label} ${index + 1}`,
+  }))
+}
+
+function marks(id: string, unit: string, values: number[]): Subtask[] {
+  return values.map((at) => ({ id: `${id}-${at}`, title: `${at} ${unit}`, at }))
+}
+
+export const SUBTASKS: Record<string, Subtask[]> = {
+  'establish-pos': steps('establish-pos', [
+    'Choose the tools you will actually use',
+    'Write the daily and weekly loop',
+    'Put this campaign inside that loop',
+    'Create one capture place for tasks and notes',
+    'Run the system for one full week',
+  ]),
+  'begin-coding': steps('begin-coding', [
+    'Choose the course or curriculum',
+    'Set a repeating practice hour',
+    'Finish the first lesson',
+    'Push the first exercise to a repo',
+  ]),
+  'begin-martial-arts': steps('begin-martial-arts', [
+    'Choose the art and the gym',
+    'Attend the first class',
+    'Get the gear you need',
+    'Put the next two sessions on the calendar',
+  ]),
+  'begin-investing': steps('begin-investing', [
+    'Open or confirm the account',
+    'Decide the first amount',
+    'Place the first contribution',
+    'Record it in the tracker',
+  ]),
+  'financial-tracking': steps('financial-tracking', [
+    'List every account',
+    'Record one month of income and spending',
+    'Separate needs, wants, and investing',
+    'Make a one-page monthly snapshot',
+  ]),
+  'establish-recovery': steps('establish-recovery', [
+    'Set a target bedtime',
+    'Choose the recovery work',
+    'Schedule it on three days',
+    'Complete the first week',
+  ]),
+  'begin-reflection': steps('begin-reflection', [
+    'Choose journal, prayer, or meditation',
+    'Set a 10-minute time',
+    'Complete the first session',
+    'Decide where the notes live',
+  ]),
+  'creative-routine': steps('creative-routine', [
+    'Name the creative work for this season',
+    'Block a repeating hour',
+    'Finish one small piece in that hour',
+    'Protect the hour for two weeks',
+  ]),
+  'asset-allocation': steps('asset-allocation', [
+    'List what you own',
+    'Choose the target mix',
+    'Write the rules for new money',
+    'Set the next review date',
+  ]),
+  resume: steps('resume', [
+    'Gather the roles and projects',
+    'Write the current version',
+    'Ask one person to read it',
+    'Export a file you can send',
+  ]),
+  'file-organization': steps('file-organization', [
+    'Pick the folder structure',
+    'Move active projects into it',
+    'Archive what you do not need open',
+    'Name the place you will search first',
+  ]),
+  backups: steps('backups', [
+    'List what must not be lost',
+    'Choose the backup location',
+    'Run the first backup',
+    'Write when the next one happens',
+  ]),
+  'career-tracking': steps('career-tracking', [
+    'List open applications and leads',
+    'Record the projects that prove the work',
+    'Note the next three moves',
+    'Review the list once',
+  ]),
+  'cannabis-practice': steps('cannabis-practice', [
+    'Write the intention for use',
+    'Choose the limits for when and how much',
+    'Name the times that are off limits',
+    'Keep those limits for two weeks',
+  ]),
+  'coding-course': steps('coding-course', [
+    'Finish the first third of the course',
+    'Finish the second third',
+    'Finish the final third',
+    'Complete the capstone or final project',
+  ]),
+  'portfolio-projects': series('portfolio-projects', 'Finish portfolio project', 3),
+  'engineering-projects': series('engineering-projects', 'Finish engineering project', 3),
+  'portfolio-website': steps('portfolio-website', [
+    'Choose the stack and the domain',
+    'Build the pages for the work',
+    'Deploy the site',
+    'Send the link to one person',
+  ]),
+  'finance-books': series('finance-books', 'Finish finance book', 12),
+  'poker-hands': marks('poker-hands', 'hands reviewed', [100, 200, 300, 400, 500]),
+  freelance: steps('freelance', [
+    'Define the offer',
+    'List ten people or places to send it',
+    'Send the first five',
+    'Have one real conversation about the work',
+  ]),
+  friendships: series('friendships', 'Strengthen friendship', 5),
+  'dating-skills': steps('dating-skills', [
+    'Decide what you are looking for',
+    'Start one new conversation',
+    'Go on one intentional date or meeting',
+    'Ask for what you want in plain language',
+  ]),
+  communication: steps('communication', [
+    'Name one pattern you want to change',
+    'Say the true thing once',
+    'Repair one conversation you avoided',
+    'Use the cleaner version for a week',
+  ]),
+  confidence: steps('confidence', [
+    'Name one thing you have been avoiding',
+    'Do that thing once',
+    'Do it again before you feel ready',
+    'Write down what changed',
+  ]),
+  'deploy-projects': series('deploy-projects', 'Deploy project', 3),
+  'income-tiers': steps('income-tiers', [
+    'Tier 1 — Record your current monthly income',
+    'Tier 2 — Increase one existing income source',
+    'Tier 3 — Open a second income stream',
+    'Tier 4 — Cover your written monthly number',
+  ]),
+  'income-increase': steps('income-increase', [
+    'Write the current income number',
+    'Name the source of the increase',
+    'Receive the higher amount once',
+    'Update the tracker',
+  ]),
+  'paying-client': steps('paying-client', [
+    'Send an offer someone can pay',
+    'Agree on scope and price',
+    'Deliver the work',
+    'Get paid',
+  ]),
+  'launch-business': steps('launch-business', [
+    'Name the offer',
+    'Set a price',
+    'Put it where people can find it',
+    'Take the first payment',
+  ]),
+  'beat-tape': steps('beat-tape', [
+    'Finish the track list',
+    'Mix and master the tape',
+    'Export the release',
+    'Publish it',
+  ]),
+  'live-performance': steps('live-performance', [
+    'Book or claim the set',
+    'Prepare the set',
+    'Play it live',
+    'Keep a recording or note from the night',
+  ]),
+  'photo-portfolio': marks('photo-portfolio', 'photos', [25, 50, 75, 100]),
+  'social-connections': series('social-connections', 'Make connection', 12),
+  'emotional-intelligence': steps('emotional-intelligence', [
+    'Name the feeling before you react, once',
+    'Write the trigger you repeat',
+    'Pause in one hard conversation',
+    'Ask what the other person needed',
+  ]),
+  conditioning: steps('conditioning', [
+    'Record a baseline',
+    'Train the quality you chose',
+    'Retest',
+    'Beat the baseline',
+  ]),
+  'martial-arts': marks('martial-arts', 'sessions', [25, 50, 100, 150, 200]),
+  'training-days': marks('training-days', 'training days', [50, 100, 150, 200]),
+  'sleep-nights': marks('sleep-nights', 'nights', [50, 100, 150, 200]),
+  'recovery-sessions': marks('recovery-sessions', 'recovery sessions', [25, 50, 75, 100]),
+  'fi-foundation': steps('fi-foundation', [
+    'Write the yearly investing rule',
+    'Keep the tracking system current',
+    'Complete a full year of contributions',
+    'Write the one-page plan for next year',
+  ]),
+  'invest-months': series('invest-months', 'Invest in month', 12),
+  'thesis-reviews': series('thesis-reviews', 'Review the thesis in month', 12),
+  'asset-income': steps('asset-income', [
+    'Name the asset',
+    'Write how it could pay you',
+    'Take one step that increases that income',
+    'Record the result',
+  ]),
+  'dj-mixes': series('dj-mixes', 'Finish mix', 12),
+  novel: steps('novel', [
+    'Lock the outline or current structure',
+    'Complete the first half of the draft',
+    'Complete the full draft',
+    'Revise it into a version you call finished',
+  ]),
+  'short-film': steps('short-film', [
+    'Lock the idea and the length',
+    'Shoot the film',
+    'Cut the film',
+    'Release it',
+  ]),
+  'family-weeks': marks('family-weeks', 'family weeks', [13, 26, 39, 52]),
+  'intimate-relationship': steps('intimate-relationship', [
+    'Say what you want',
+    'Practice one honest conversation',
+    'Repair one miss',
+    'Keep a boundary you respect',
+  ]),
+  'reflection-days': marks('reflection-days', 'reflection days', [30, 100, 200, 300]),
+  'service-hours': marks('service-hours', 'service hours', [10, 25, 50, 100]),
+  meals: marks('meals', 'meals', [10, 20, 30, 40, 50]),
+  automotive: steps('automotive', [
+    'Oil and filter',
+    'Tire pressure and tread',
+    'Engine air filter',
+    'Cabin filter',
+    'Wiper blades',
+    'Battery test',
+    'Brake inspection',
+    'Fluid check',
+    'Lights',
+    'One repair you understand',
+  ]),
+  'cleaning-weeks': marks('cleaning-weeks', 'cleaning weeks', [13, 26, 39, 52]),
+  'grooming-weeks': marks('grooming-weeks', 'grooming weeks', [13, 26, 39, 52]),
+  'finish-pos': steps('finish-pos', [
+    'The daily loop runs without a reminder',
+    'Weekly planning lives in the system',
+    'Reviews are on the calendar',
+    'The system is written so you can restart it',
+  ]),
+  'campaign-months': series('campaign-months', 'Keep the campaign in month', 12),
+  'weekly-plans': marks('weekly-plans', 'weeks planned', [13, 26, 39, 52]),
+  'monthly-reviews': series('monthly-reviews', 'Complete the review for month', 12),
+  places: series('places', 'Visit new place', 3),
+  explorations: marks('explorations', 'outings', [6, 12, 18, 24]),
+  survival: steps('survival', [
+    'Choose the 48 hours',
+    'Pack only what the challenge allows',
+    'Complete the first 24 hours',
+    'Complete the full 48 hours',
+  ]),
+  experiences: marks('experiences', 'experiences', [10, 25, 50, 75, 100]),
+  'deep-work-days': marks('deep-work-days', 'deep work days', [50, 100, 150, 200]),
+}

@@ -86,6 +86,28 @@ describe('campaign actions', () => {
     expect(derive(save, addDays(day, 3)).xp).toBeGreaterThan(0)
   })
 
+  it('checks income tiers one step at a time', () => {
+    const start = createSave()
+    start.startedAt = day
+    const goal = GOALS.find((item) => item.id === 'income-tiers')!
+    expect(goal.subtasks.map((step) => step.title)).toEqual([
+      'Tier 1 — Record your current monthly income',
+      'Tier 2 — Increase one existing income source',
+      'Tier 3 — Open a second income stream',
+      'Tier 4 — Cover your written monthly number',
+    ])
+    const marked = commit(start, { type: 'toggle-subtask', goalId: 'income-tiers', subtaskId: goal.subtasks[0].id, date: day, at: at(day) }, day, at(day))
+    expect(derive(marked, day).goalCurrent['income-tiers']).toBe(1)
+    expect(derive(marked, day).xp).toBeGreaterThan(0)
+    const cleared = commit(marked, { type: 'toggle-subtask', goalId: 'income-tiers', subtaskId: goal.subtasks[0].id, date: day, at: at(day) }, day, at(day))
+    expect(derive(cleared, day).goalCurrent['income-tiers']).toBe(0)
+    expect(derive(cleared, day).xp).toBe(0)
+  })
+
+  it('gives every quest at least one step', () => {
+    for (const goal of GOALS) expect(goal.subtasks.length).toBeGreaterThan(0)
+  })
+
   it('refuses to undo a previous day', () => {
     let save = createSave()
     save.startedAt = day

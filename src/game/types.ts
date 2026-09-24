@@ -19,6 +19,12 @@ export type SequenceId = 'awakening' | 'apprentice' | 'assassin' | 'master'
 
 export type ContractId = 'body' | 'mind' | 'inner-temple'
 
+export interface Subtask {
+  id: string
+  title: string
+  at?: number
+}
+
 export interface GoalDefinition {
   id: string
   title: string
@@ -31,6 +37,7 @@ export interface GoalDefinition {
   skillPathId: Exclude<SkillPathId, 'character'>
   sequenceId: SequenceId
   headline?: boolean
+  subtasks: Subtask[]
 }
 
 export interface ContractDefinition {
@@ -52,6 +59,7 @@ export interface GameEvent {
   goalId?: string
   amount?: number
   parentId?: string
+  subtaskId?: string
 }
 
 export interface ContractText {
