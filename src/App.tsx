@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
+import Days from './pages/Days'
 import Home from './pages/Home'
 import Profile from './pages/Profile'
 import ProgressPage from './pages/Progress'
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="/quests/:goalId" element={<QuestDetail />} />
         <Route path="/skills" element={<Skills />} />
         <Route path="/skills/:pathId" element={<SkillDetail />} />
+        <Route path="/days" element={<Days />} />
         <Route path="/progress" element={<ProgressPage />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/victory" element={<Victory />} />

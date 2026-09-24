@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { GOALS } from '../game/catalog'
-import { formatSync, isWon } from '../game/formulas'
+import { formatSync, isWon, percentColor } from '../game/formulas'
 import { useGame } from '../state/GameProvider'
 
 export default function Victory() {
@@ -13,7 +13,7 @@ export default function Victory() {
         <p className="brand">THE ANIMUS</p>
         <h1>The year is still open.</h1>
         <p>{remaining} main targets remain before full synchronization.</p>
-        <p>Synchronization {formatSync(view.sync)}</p>
+        <p>Synchronization <span style={{ color: percentColor(view.sync) }}>{formatSync(view.sync)}</span></p>
       </>
     )
   }
@@ -21,7 +21,7 @@ export default function Victory() {
   return (
     <section className="victory">
       <p className="brand">THE ANIMUS</p>
-      <p className="sync-value">{formatSync(view.sync)}</p>
+      <p className="sync-value" style={{ color: percentColor(view.sync) }}>{formatSync(view.sync)}</p>
       <h1>FULL SYNCHRONIZATION</h1>
       <h1>SEQUENCE COMPLETE</h1>
       <h1>YEAR WON</h1>

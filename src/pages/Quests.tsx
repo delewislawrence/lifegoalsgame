@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { GOALS, SEQUENCES, skillById } from '../game/catalog'
-import { formatSync } from '../game/formulas'
+import { formatSync, percentColor } from '../game/formulas'
 import type { SequenceId } from '../game/types'
 import { useGame } from '../state/GameProvider'
 import ProgressBar from '../components/ProgressBar'
@@ -27,7 +27,7 @@ export default function Quests() {
           </p>
           <h3>{sequence.name}</h3>
           <p>{sequence.purpose}</p>
-          <p className="progress-copy">{formatSync(view.sequenceProgress[sequence.id])}</p>
+          <p className="progress-copy" style={{ color: percentColor(view.sequenceProgress[sequence.id]) }}>{formatSync(view.sequenceProgress[sequence.id])}</p>
           <ProgressBar value={view.sequenceProgress[sequence.id]} />
         </button>
       ))}

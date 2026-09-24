@@ -1,5 +1,5 @@
 import { ACHIEVEMENTS } from '../game/achievements'
-import { formatSync } from '../game/formulas'
+import { formatSync, percentColor } from '../game/formulas'
 import { useGame } from '../state/GameProvider'
 import ProgressBar from '../components/ProgressBar'
 
@@ -12,7 +12,7 @@ export default function ProgressPage() {
       <h1>LEVEL {view.level.level} — {view.level.title.toUpperCase()}</h1>
       <p>{view.xp} XP{view.level.nextXp ? ` · ${view.level.nextXp - view.xp} to ${view.level.nextTitle}` : ''}</p>
       <ProgressBar value={levelPct} />
-      <p className="meta">Synchronization {formatSync(view.sync)}</p>
+      <p className="meta">Synchronization <span style={{ color: percentColor(view.sync) }}>{formatSync(view.sync)}</span></p>
       <div className="stat-grid section">
         <div className="stat"><b>{view.contractsCompleted}</b><span>Contracts</span></div>
         <div className="stat"><b>{view.perfectDays}</b><span>Perfect days</span></div>

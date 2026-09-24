@@ -3,6 +3,7 @@ import { ACHIEVEMENTS } from './achievements'
 import { BONUS_XP, CONTRACTS, GOAL_BY_ID, GOALS, contractById, isChecklist } from './catalog'
 import { derive, goalXpDelta } from './derive'
 import { localDate } from './dates'
+import { campaignStart } from './formulas'
 import type { CampaignArchive, ContractId, ContractText, GameEvent, Save } from './types'
 
 export type Action =
@@ -27,7 +28,7 @@ export function createSave(now = new Date()): Save {
   }
   return {
     version: 1,
-    startedAt: localDate(now),
+    startedAt: campaignStart(localDate(now)),
     campaign: 1,
     playerName: 'Initiate',
     sound: true,
@@ -176,7 +177,7 @@ export function reduce(save: Save, action: Action): Save {
         sound: save.sound,
         contracts: save.contracts,
         history: save.history,
-        startedAt: action.date,
+        startedAt: campaignStart(action.date),
       }
     case 'begin-next-year': {
       const view = derive(save, action.date)
@@ -190,7 +191,7 @@ export function reduce(save: Save, action: Action): Save {
         sound: save.sound,
         contracts: save.contracts,
         history: [...save.history, archive],
-        startedAt: action.date,
+        startedAt: campaignStart(action.date),
       }
     }
     default:

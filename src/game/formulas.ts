@@ -53,6 +53,25 @@ export function syncFromRatios(ratios: number[]): number {
   return average(ratios) * 100
 }
 
+const PERCENT_STOPS: [number, [number, number, number]][] = [
+  [0, [220, 32, 32]],
+  [33, [232, 122, 18]],
+  [66, [236, 208, 42]],
+  [100, [36, 176, 72]],
+]
+
+export function percentColor(value: number): string {
+  const amount = Math.max(0, Math.min(100, value))
+  let index = 0
+  while (index < PERCENT_STOPS.length - 1 && amount > PERCENT_STOPS[index + 1][0]) index += 1
+  const [startAt, start] = PERCENT_STOPS[index]
+  const [endAt, end] = PERCENT_STOPS[Math.min(index + 1, PERCENT_STOPS.length - 1)]
+  const span = endAt - startAt || 1
+  const mix = (amount - startAt) / span
+  const channels = start.map((channel, channelIndex) => Math.round(channel + (end[channelIndex] - channel) * mix))
+  return `rgb(${channels[0]}, ${channels[1]}, ${channels[2]})`
+}
+
 export function formatSync(value: number): string {
   if (value >= 99.999) return '100%'
   if (value <= 0) return '0%'
@@ -77,8 +96,14 @@ export function sequenceForCampaignDay(dayIndex: number): SequenceId {
   return current
 }
 
+export const CAMPAIGN_DAY_ONE = '2026-09-24'
+
+export function campaignStart(date: string): string {
+  return date < CAMPAIGN_DAY_ONE ? CAMPAIGN_DAY_ONE : date
+}
+
 export function campaignDayIndex(startedAt: string, today: string): number {
-  return Math.max(0, daysBetween(startedAt, today))
+  return daysBetween(startedAt, today)
 }
 
 export function isWon(sync: number): boolean {

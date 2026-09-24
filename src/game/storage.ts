@@ -1,3 +1,4 @@
+import { campaignStart } from './formulas'
 import { createSave } from './reducer'
 import type { Save } from './types'
 
@@ -11,7 +12,7 @@ export function loadSave(): Save {
     if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.events) || !parsed.startedAt) {
       return createSave()
     }
-    return parsed
+    return { ...parsed, startedAt: campaignStart(parsed.startedAt) }
   } catch {
     return createSave()
   }

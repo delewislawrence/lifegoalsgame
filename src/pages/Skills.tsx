@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { GOALS, SKILL_PATHS } from '../game/catalog'
-import { formatSync } from '../game/formulas'
+import { formatSync, percentColor } from '../game/formulas'
 import { useGame } from '../state/GameProvider'
 import ProgressBar from '../components/ProgressBar'
 
@@ -35,7 +35,7 @@ export default function Skills() {
               </p>
             ) : <p className="progress-copy">Average of every path</p>}
             <ProgressBar value={progress} />
-            <p>{formatSync(progress)}</p>
+            <p style={{ color: percentColor(progress) }}>{formatSync(progress)}</p>
           </Link>
         )
       })}

@@ -1,10 +1,12 @@
 import { NavLink, Outlet } from 'react-router-dom'
+import HermeticField from './HermeticField'
 import { useGame } from '../state/GameProvider'
 
 const LINKS = [
   ['/', 'Home'],
   ['/quests', 'Quests'],
   ['/skills', 'Skills'],
+  ['/days', 'Days'],
   ['/progress', 'Progress'],
   ['/profile', 'Profile'],
 ] as const
@@ -13,6 +15,7 @@ export default function Layout() {
   const { toasts, storageError } = useGame()
   return (
     <>
+      <HermeticField />
       <div className="toasts" aria-live="polite">
         {toasts.map((toast) => (
           <div key={toast.id} className={`toast ${toast.kind}`}>{toast.text}</div>

@@ -1,7 +1,9 @@
 import { GOALS } from './catalog'
+import { gradeDay } from './journal'
+import { nextAgenda } from './schedule'
 import { addDays } from './dates'
 import { derive } from './derive'
-import { formatSyncDelta, levelFromXp, syncFromRatios, xpForProgress } from './formulas'
+import { formatSyncDelta, levelFromXp, percentColor, syncFromRatios, xpForProgress } from './formulas'
 import { commit, createSave } from './reducer'
 
 const day = '2026-01-01'
@@ -22,6 +24,15 @@ describe('levels and sync', () => {
 
   it('averages every main target equally', () => {
     expect(syncFromRatios([1, 0.5, 0])).toBe(50)
+  })
+
+  it('moves percentage color from red through yellow to green', () => {
+    expect(percentColor(0)).toBe('rgb(220, 32, 32)')
+    expect(percentColor(33)).toBe('rgb(232, 122, 18)')
+    expect(percentColor(66)).toBe('rgb(236, 208, 42)')
+    expect(percentColor(100)).toBe('rgb(36, 176, 72)')
+    expect(percentColor(-20)).toBe(percentColor(0))
+    expect(percentColor(140)).toBe(percentColor(100))
   })
 
   it('hides tiny sync deltas and shows the rest', () => {
@@ -102,6 +113,19 @@ describe('campaign actions', () => {
     const cleared = commit(marked, { type: 'toggle-subtask', goalId: 'income-tiers', subtaskId: goal.subtasks[0].id, date: day, at: at(day) }, day, at(day))
     expect(derive(cleared, day).goalCurrent['income-tiers']).toBe(0)
     expect(derive(cleared, day).xp).toBe(0)
+  })
+
+  it('grades a day from 0 to 100 in tens', () => {
+    expect(gradeDay(10, 10)).toEqual({ score: 100, grade: 'Perfect' })
+    expect(gradeDay(9, 10)).toEqual({ score: 90, grade: 'Excellent' })
+    expect(gradeDay(8, 10)).toEqual({ score: 80, grade: 'Good' })
+    expect(gradeDay(0, 10)).toEqual({ score: 0, grade: 'Missed' })
+  })
+
+  it('lists the next unfinished steps in campaign order', () => {
+    const agenda = nextAgenda([], {}, 7)
+    expect(agenda).toHaveLength(7)
+    expect(agenda[0].goalId).toBe('establish-pos')
   })
 
   it('gives every quest at least one step', () => {

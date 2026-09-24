@@ -1,17 +1,21 @@
-import { CONTRACTS } from '../game/catalog'
-import { formatSync } from '../game/formulas'
-import { formatLongDate } from '../game/dates'
-import { useGame } from '../state/GameProvider'
-import ProgressBar from '../components/ProgressBar'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { CONTRACTS, GOAL_BY_ID } from '../game/catalog'
+import { formatLongDate } from '../game/dates'
+import { formatSync, percentColor } from '../game/formulas'
+import { stepDone } from '../game/schedule'
+import ProgressBar from '../components/ProgressBar'
+import { useGame } from '../state/GameProvider'
 
 export default function Home() {
-  const { save, view, today, dispatch } = useGame()
+  const { save, view, today, journal, dispatch, submitDay } = useGame()
+  const todayEntry = journal.entries.find((entry) => entry.date === today)
+  const [reflection, setReflection] = useState(todayEntry?.reflection ?? '')
   return (
     <>
       <p className="brand">THE ANIMUS</p>
       <p className="sync-label">Synchronization</p>
-      <p className="sync-value">{formatSync(view.sync)}</p>
+      <p className="sync-value" style={{ color: percentColor(view.sync) }}>{formatSync(view.sync)}</p>
       <ProgressBar value={view.sync} />
       <p className="sequence-line">Sequence {view.sequence.index} — {view.sequence.name}</p>
       <p className="level-line">LEVEL {view.level.level} — {view.level.title.toUpperCase()}</p>
@@ -21,7 +25,9 @@ export default function Home() {
           : 'Level complete'}
       </p>
       <p className="streak">{view.streak} DAY SYNCHRONIZATION STREAK</p>
-      <p className="meta">{formatLongDate(today)} · Day {view.campaignDay}</p>
+      <p className="meta">
+        {formatLongDate(today)} · {view.campaignDay < 1 ? `Day 1 begins ${formatLongDate(save.startedAt)}` : `Day ${view.campaignDay}`}
+      </p>
 
       <section className="section">
         <div className="row-between">
@@ -54,6 +60,43 @@ export default function Home() {
         })}
         {view.memorySynchronized ? <p className="seal">MEMORY SYNCHRONIZED</p> : null}
         {view.sync >= 99.999 ? <p className="section"><Link className="btn solid" to="/victory">Year won — enter the archive</Link></p> : null}
+      </section>
+
+      <section className="section day-board">
+        <div>
+          <h2>On schedule</h2>
+          <p className="meta">The next 7 steps. Finish these with today's contracts.</p>
+          {journal.agenda.length === 0 ? <p>Nothing unfinished. The year is caught up.</p> : null}
+          {journal.agenda.map((item) => {
+            const goal = GOAL_BY_ID[item.goalId]
+            const step = goal?.subtasks.find((candidate) => candidate.id === item.subtaskId)
+            if (!goal || !step) return null
+            const done = stepDone(save.events, item.goalId, item.subtaskId, view.goalCurrent[item.goalId] ?? 0)
+            return (
+              <Link key={`${item.goalId}-${item.subtaskId}`} className={done ? 'quest-link is-done' : 'quest-link'} to={`/quests/${item.goalId}`}>
+                <p className="kicker">{done ? 'Done' : 'Next'} · {goal.title}</p>
+                <strong>{step.title}</strong>
+              </Link>
+            )
+          })}
+        </div>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault()
+            submitDay(reflection)
+          }}
+        >
+          <h2>Reflection</h2>
+          <p className="meta">Write the day, then submit. The grade counts 3 contracts and these 7 steps.</p>
+          <textarea value={reflection} onChange={(event) => setReflection(event.target.value)} placeholder="What happened today?" />
+          <div className="button-row">
+            <button className="btn solid" type="submit">{todayEntry ? 'Update day' : 'Submit day'}</button>
+          </div>
+          {todayEntry ? (
+            <p className="seal"><span style={{ color: percentColor(todayEntry.score) }}>{todayEntry.score}</span> — {todayEntry.grade} · {todayEntry.tasksCompleted}/{todayEntry.tasksExpected}</p>
+          ) : null}
+          <p className="meta"><Link to="/days">All days</Link></p>
+        </form>
       </section>
     </>
   )

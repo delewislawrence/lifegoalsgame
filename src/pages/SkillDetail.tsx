@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { GOALS, skillById } from '../game/catalog'
-import { formatSync } from '../game/formulas'
+import { formatSync, percentColor } from '../game/formulas'
 import type { SkillPathId } from '../game/types'
 import { useGame } from '../state/GameProvider'
 import ProgressBar from '../components/ProgressBar'
@@ -29,7 +29,7 @@ export default function SkillDetail() {
       <h1>{path.name}</h1>
       <p>{path.description}</p>
       {id === 'character' ? <p>Character has no private quests. It is the average of the other twelve paths.</p> : null}
-      <p className="progress-copy">{formatSync(progress)}</p>
+      <p className="progress-copy" style={{ color: percentColor(progress) }}>{formatSync(progress)}</p>
       <ProgressBar value={progress} />
       {goals.map((goal) => {
         const current = view.goalCurrent[goal.id] ?? 0

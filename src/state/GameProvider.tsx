@@ -4,6 +4,8 @@ import { derive, type View } from '../game/derive'
 import { formatSyncDelta } from '../game/formulas'
 import { commit, type Action } from '../game/reducer'
 import { playFeedback } from '../game/sound'
+import { gradeDay, loadJournal, mergeJournal, persistJournal, type DayEntry, type Journal } from '../game/journal'
+import { nextAgenda, stepDone } from '../game/schedule'
 import { loadSave, persistSave } from '../game/storage'
 import { localDate } from '../game/dates'
 import type { Save } from '../game/types'
@@ -18,9 +20,13 @@ interface GameApi {
   save: Save
   view: View
   today: string
+  journal: Journal
   toasts: Toast[]
   storageError: string | null
   dispatch: (action: Action) => void
+  submitDay: (reflection: string) => void
+  deleteDay: (id: string) => void
+  mergeDays: (entries: DayEntry[]) => void
 }
 
 const GameContext = createContext<GameApi | null>(null)
@@ -45,6 +51,7 @@ function toastsFor(before: View, after: View, previous: Save, next: Save): Toast
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [save, setSave] = useState<Save>(() => loadSave())
+  const [journal, setJournal] = useState<Journal>(() => loadJournal(localDate()))
   const [toasts, setToasts] = useState<Toast[]>([])
   const [storageError, setStorageError] = useState<string | null>(null)
   const saveRef = useRef(save)
@@ -56,6 +63,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setStorageError(persistSave(save))
   }, [save])
+
+  useEffect(() => {
+    persistJournal(journal)
+  }, [journal])
+
+  useEffect(() => {
+    setJournal((current) => {
+      if (current.agendaDate === today && current.agenda.length > 0) return current
+      const agenda = nextAgenda(save.events, derive(save, today).goalCurrent)
+      if (current.agendaDate === today && agenda.length === 0) return current
+      return { ...current, agendaDate: today, agenda }
+    })
+  }, [today, save])
 
   useEffect(() => {
     if (toasts.length === 0) return
@@ -80,8 +100,41 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const submitDay = (reflection: string) => {
+    const snapshot = derive(saveRef.current, today)
+    const steps = journal.agenda.filter((item) => stepDone(saveRef.current.events, item.goalId, item.subtaskId, snapshot.goalCurrent[item.goalId] ?? 0)).length
+    const tasksCompleted = snapshot.todayCount + steps
+    const tasksExpected = 3 + journal.agenda.length
+    const graded = gradeDay(tasksCompleted, tasksExpected)
+    setJournal((current) => {
+      const existing = current.entries.find((entry) => entry.date === today)
+      const entry: DayEntry = {
+        id: existing?.id ?? crypto.randomUUID(),
+        date: today,
+        reflection: reflection.trim(),
+        tasksCompleted,
+        tasksExpected,
+        score: graded.score,
+        grade: graded.grade,
+        createdAt: existing?.createdAt ?? new Date().toISOString(),
+      }
+      const entries = existing
+        ? current.entries.map((item) => (item.date === today ? entry : item))
+        : [entry, ...current.entries]
+      return { ...current, entries }
+    })
+  }
+
+  const deleteDay = (id: string) => {
+    setJournal((current) => ({ ...current, entries: current.entries.filter((entry) => entry.id !== id) }))
+  }
+
+  const mergeDays = (entries: DayEntry[]) => {
+    setJournal((current) => mergeJournal(current, entries))
+  }
+
   return (
-    <GameContext.Provider value={{ save, view, today, toasts, storageError, dispatch }}>
+    <GameContext.Provider value={{ save, view, today, journal, toasts, storageError, dispatch, submitDay, deleteDay, mergeDays }}>
       {children}
     </GameContext.Provider>
   )

@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { CONTRACTS } from '../game/catalog'
 import { parseSave } from '../game/storage'
 import { useGame } from '../state/GameProvider'
+import type { DayEntry } from '../game/journal'
 import type { ContractId, ContractText } from '../game/types'
 
 export default function Profile() {
-  const { save, dispatch, today } = useGame()
+  const { save, journal, dispatch, today, mergeDays } = useGame()
   const [name, setName] = useState(save.playerName)
   const [contracts, setContracts] = useState<Record<ContractId, ContractText>>(save.contracts)
   const [message, setMessage] = useState('')
@@ -17,7 +18,7 @@ export default function Profile() {
   }
 
   const exportSave = () => {
-    const blob = new Blob([JSON.stringify(save, null, 2)], { type: 'application/json' })
+    const blob = new Blob([JSON.stringify({ ...save, journal: journal.entries }, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
@@ -76,13 +77,16 @@ export default function Profile() {
             onChange={async (event) => {
               const file = event.target.files?.[0]
               if (!file) return
-              const parsed = parseSave(await file.text())
+              const text = await file.text()
+              const parsed = parseSave(text)
               if (!parsed) {
                 setMessage('That file is not an Animus save.')
                 return
               }
               dispatch({ type: 'import-save', save: parsed })
-              setMessage('Campaign imported.')
+              const extra = JSON.parse(text) as { journal?: DayEntry[] }
+              if (Array.isArray(extra.journal)) mergeDays(extra.journal)
+              setMessage('Campaign imported. Existing days were kept.')
             }}
           />
         </label>
@@ -101,7 +105,7 @@ export default function Profile() {
       </section>
       <section className="section">
         <h2>Reset</h2>
-        <p>This clears the current year and keeps archived campaigns.</p>
+        <p>This clears the current year and keeps archived campaigns. Recorded days stay until you delete each one on the Days page.</p>
         {confirmReset ? (
           <button className="btn" type="button" onClick={() => dispatch({ type: 'reset-campaign', at: new Date().toISOString(), date: today })}>
             Confirm reset
