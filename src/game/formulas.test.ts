@@ -119,6 +119,14 @@ describe('campaign actions', () => {
     expect(derive(cleared, day).xp).toBe(0)
   })
 
+  it('pays bonus XP for an ad hoc task and removes it on undo', () => {
+    const start = createSave()
+    const done = commit(start, { type: 'toggle-adhoc', taskId: 'task-1', title: 'Call the bank', date: day, at: at(day), done: true }, day, at(day))
+    expect(derive(done, day).xp).toBe(15)
+    const undone = commit(done, { type: 'toggle-adhoc', taskId: 'task-1', title: 'Call the bank', date: day, at: at(day), done: false }, day, at(day))
+    expect(derive(undone, day).xp).toBe(0)
+  })
+
   it('grades a day from 0 to 100 in tens', () => {
     expect(gradeDay(10, 10)).toEqual({ score: 100, grade: 'Perfect' })
     expect(gradeDay(9, 10)).toEqual({ score: 90, grade: 'Excellent' })

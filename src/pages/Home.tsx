@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CONTRACTS, GOAL_BY_ID } from '../game/catalog'
+import { ADHOC_XP, CONTRACTS, GOAL_BY_ID } from '../game/catalog'
 import { formatLongDate } from '../game/dates'
 import { dueReview } from '../game/periods'
 import { formatSync, percentColor } from '../game/formulas'
@@ -9,10 +9,12 @@ import ProgressBar from '../components/ProgressBar'
 import { useGame } from '../state/GameProvider'
 
 export default function Home() {
-  const { save, view, today, journal, dispatch, submitDay } = useGame()
+  const { save, view, today, journal, dispatch, submitDay, addAdhoc, toggleAdhoc, removeAdhoc } = useGame()
   const todayEntry = journal.entries.find((entry) => entry.date === today)
   const due = dueReview(save.startedAt, today, save.reviews ?? [], view.campaignDay)
   const [reflection, setReflection] = useState(todayEntry?.reflection ?? '')
+  const [bonusTitle, setBonusTitle] = useState('')
+  const bonus = (journal.adhoc ?? []).filter((task) => task.date === today)
   return (
     <>
       <p className="brand">THE ANIMUS</p>
@@ -82,6 +84,30 @@ export default function Home() {
               </Link>
             )
           })}
+          <h2 className="section">Bonus tasks</h2>
+          <p className="meta">Extra work. Each finished task fills one missed grade point and pays {ADHOC_XP} XP.</p>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault()
+              addAdhoc(bonusTitle)
+              setBonusTitle('')
+            }}
+          >
+            <input value={bonusTitle} onChange={(event) => setBonusTitle(event.target.value)} placeholder="Add a task for today" />
+            <div className="button-row">
+              <button className="btn" type="submit">Add</button>
+            </div>
+          </form>
+          {bonus.map((task) => (
+            <article key={task.id} className={task.done ? 'card is-done' : 'card'}>
+              <h3>{task.title}</h3>
+              <p className="reward">+{ADHOC_XP} XP</p>
+              <div className="button-row">
+                <button className="btn solid" type="button" onClick={() => toggleAdhoc(task)}>{task.done ? 'Undo' : 'Complete'}</button>
+                <button className="btn ghost" type="button" onClick={() => removeAdhoc(task.id)}>Remove</button>
+              </div>
+            </article>
+          ))}
         </div>
         <form
           onSubmit={(event) => {
@@ -90,7 +116,7 @@ export default function Home() {
           }}
         >
           <h2>Reflection</h2>
-          <p className="meta">Write the day, then submit. The grade counts 3 contracts and these 7 steps.</p>
+          <p className="meta">Write the day, then submit. The grade counts 3 contracts and these 7 steps. Bonus tasks can fill a miss.</p>
           <textarea value={reflection} onChange={(event) => setReflection(event.target.value)} placeholder="What happened today?" />
           <div className="button-row">
             <button className="btn solid" type="submit">{todayEntry ? 'Update day' : 'Submit day'}</button>

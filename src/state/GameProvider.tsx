@@ -4,7 +4,7 @@ import { derive, type View } from '../game/derive'
 import { formatSyncDelta } from '../game/formulas'
 import { commit, type Action } from '../game/reducer'
 import { playFeedback } from '../game/sound'
-import { gradeDay, loadJournal, mergeJournal, persistJournal, type DayEntry, type Journal } from '../game/journal'
+import { gradeDay, loadJournal, mergeJournal, persistJournal, type AdhocTask, type DayEntry, type Journal } from '../game/journal'
 import { isActive, listGoals } from '../game/goals'
 import { nextAgenda, stepDone } from '../game/schedule'
 import { loadSave, persistSave } from '../game/storage'
@@ -26,6 +26,9 @@ interface GameApi {
   storageError: string | null
   dispatch: (action: Action) => void
   submitDay: (reflection: string) => void
+  addAdhoc: (title: string) => void
+  toggleAdhoc: (task: AdhocTask) => void
+  removeAdhoc: (id: string) => void
   deleteDay: (id: string) => void
   mergeDays: (entries: DayEntry[]) => void
 }
@@ -106,7 +109,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const snapshot = derive(previous, today)
     const goals = listGoals(previous)
     const steps = journal.agenda.filter((item) => stepDone(previous.events, item.goalId, item.subtaskId, snapshot.goalCurrent[item.goalId] ?? 0, goals))
-    const tasksCompleted = snapshot.todayCount + steps.length
+    const bonus = (journal.adhoc ?? []).filter((task) => task.date === today && task.done).length
+    const tasksCompleted = snapshot.todayCount + steps.length + bonus
     const tasksExpected = 3 + journal.agenda.length
     const graded = gradeDay(tasksCompleted, tasksExpected)
     const xp = previous.events.filter((event) => event.date === today).reduce((sum, event) => sum + event.xp, 0)
@@ -142,6 +146,31 @@ export function GameProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  const addAdhoc = (title: string) => {
+    const trimmed = title.trim()
+    if (!trimmed) return
+    setJournal((current) => ({
+      ...current,
+      adhoc: [{ id: crypto.randomUUID(), date: today, title: trimmed, done: false }, ...current.adhoc],
+    }))
+  }
+
+  const toggleAdhoc = (task: AdhocTask) => {
+    if (task.date !== today) return
+    const done = !task.done
+    dispatch({ type: 'toggle-adhoc', taskId: task.id, title: task.title, date: task.date, at: new Date().toISOString(), done })
+    setJournal((current) => ({
+      ...current,
+      adhoc: current.adhoc.map((item) => (item.id === task.id ? { ...item, done } : item)),
+    }))
+  }
+
+  const removeAdhoc = (id: string) => {
+    const task = journal.adhoc.find((item) => item.id === id)
+    if (task?.done) dispatch({ type: 'toggle-adhoc', taskId: id, title: task.title, date: task.date, at: new Date().toISOString(), done: false })
+    setJournal((current) => ({ ...current, adhoc: current.adhoc.filter((item) => item.id !== id) }))
+  }
+
   const deleteDay = (id: string) => {
     setJournal((current) => ({ ...current, entries: current.entries.filter((entry) => entry.id !== id) }))
   }
@@ -151,7 +180,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <GameContext.Provider value={{ save, view, today, journal, toasts, storageError, dispatch, submitDay, deleteDay, mergeDays }}>
+    <GameContext.Provider value={{ save, view, today, journal, toasts, storageError, dispatch, submitDay, addAdhoc, toggleAdhoc, removeAdhoc, deleteDay, mergeDays }}>
       {children}
     </GameContext.Provider>
   )

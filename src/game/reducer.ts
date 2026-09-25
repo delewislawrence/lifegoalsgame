@@ -1,6 +1,6 @@
 import { applyAchievements } from './achievements'
 import { ACHIEVEMENTS } from './achievements'
-import { BONUS_XP, CONTRACTS, GOAL_BY_ID, GOALS, contractById, isChecklist } from './catalog'
+import { ADHOC_XP, BONUS_XP, CONTRACTS, GOAL_BY_ID, GOALS, contractById, isChecklist } from './catalog'
 import { derive, goalXpDelta } from './derive'
 import { localDate } from './dates'
 import { campaignStart } from './formulas'
@@ -11,6 +11,7 @@ import type { CampaignArchive, ContractId, ContractText, CustomGoal, Debt, Finan
 
 export type Action =
   | { type: 'complete-contract'; contractId: ContractId; date: string; at: string }
+  | { type: 'toggle-adhoc'; taskId: string; title: string; date: string; at: string; done: boolean }
   | { type: 'uncomplete-contract'; contractId: ContractId; date: string; today: string }
   | { type: 'log-goal'; goalId: string; amount: number; date: string; at: string }
   | { type: 'toggle-subtask'; goalId: string; subtaskId: string; date: string; at: string }
@@ -121,6 +122,14 @@ function commitFinance(save: Save, finance: FinanceState, event: GameEvent): Sav
 
 export function reduce(save: Save, action: Action): Save {
   switch (action.type) {
+    case 'toggle-adhoc': {
+      const without = save.events.filter((event) => !(event.type === 'adhoc' && event.note === action.taskId))
+      if (!action.done) return without.length === save.events.length ? save : { ...save, events: without }
+      return {
+        ...save,
+        events: [...without, { id: uid(), type: 'adhoc', at: action.at, date: action.date, xp: ADHOC_XP, note: action.taskId }],
+      }
+    }
     case 'complete-contract': {
       if (contractDone(save, action.date, action.contractId)) return save
       const contract = contractById(action.contractId)

@@ -2,6 +2,7 @@ import { SUBTASKS } from './subtasks'
 import type { ContractDefinition, GoalDefinition, SequenceId, SkillPathId } from './types'
 
 export const BONUS_XP = 40
+export const ADHOC_XP = 15
 export const MAJOR_XP = 500
 
 export const SEQUENCES: {

@@ -25,11 +25,19 @@ export interface DayEntry {
   snapshot?: DaySnapshot
 }
 
+export interface AdhocTask {
+  id: string
+  date: string
+  title: string
+  done: boolean
+}
+
 export interface Journal {
   version: 1
   agendaDate: string
   agenda: AgendaRef[]
   entries: DayEntry[]
+  adhoc: AdhocTask[]
 }
 
 export const GRADE_SCORES = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0] as const
@@ -49,7 +57,7 @@ const GRADES: Record<number, string> = {
 }
 
 export function emptyJournal(date: string): Journal {
-  return { version: 1, agendaDate: date, agenda: [], entries: [] }
+  return { version: 1, agendaDate: date, agenda: [], entries: [], adhoc: [] }
 }
 
 export function gradeName(score: number): string {
@@ -75,6 +83,7 @@ export function loadJournal(today: string): Journal {
       agendaDate: parsed.agendaDate || today,
       agenda: Array.isArray(parsed.agenda) ? parsed.agenda : [],
       entries: parsed.entries.filter((entry) => entry && typeof entry.id === 'string' && typeof entry.date === 'string'),
+      adhoc: Array.isArray(parsed.adhoc) ? parsed.adhoc.filter((task) => task && typeof task.id === 'string' && typeof task.title === 'string' && typeof task.date === 'string') : [],
     }
   } catch {
     return emptyJournal(today)

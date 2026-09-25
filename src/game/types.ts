@@ -58,6 +58,7 @@ export interface GameEvent {
   type:
     | 'contract'
     | 'daily-bonus'
+    | 'adhoc'
     | 'goal-progress'
     | 'weekly-review'
     | 'monthly-review'
