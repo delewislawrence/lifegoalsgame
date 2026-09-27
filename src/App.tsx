@@ -4,6 +4,7 @@ import Days from './pages/Days'
 import Finance from './pages/Finance'
 import Home from './pages/Home'
 import Profile from './pages/Profile'
+import Settings from './pages/Settings'
 import ProgressPage from './pages/Progress'
 import Review from './pages/Review'
 import QuestDetail from './pages/QuestDetail'
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="/review" element={<Review />} />
         <Route path="/progress" element={<ProgressPage />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="/victory" element={<Victory />} />
       </Route>
     </Routes>

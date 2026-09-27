@@ -3,11 +3,14 @@ import { Link } from 'react-router-dom'
 import { GOALS, SEQUENCES, skillById } from '../game/catalog'
 import { formatSync, percentColor } from '../game/formulas'
 import type { SequenceId } from '../game/types'
+import { sequenceName, useThemeId } from '../settings/names'
 import { useGame } from '../state/GameProvider'
 import ProgressBar from '../components/ProgressBar'
+import TaskNote from '../components/TaskNote'
 
 export default function Quests() {
   const { view } = useGame()
+  const theme = useThemeId()
   const [filter, setFilter] = useState<SequenceId | 'all'>('all')
   const goals = GOALS.filter((goal) => filter === 'all' || goal.sequenceId === filter)
   return (
@@ -25,7 +28,7 @@ export default function Quests() {
             Sequence {sequence.index}
             {view.sequence.id === sequence.id ? ' · Current' : ''}
           </p>
-          <h3>{sequence.name}</h3>
+          <h3>{sequenceName(theme, sequence.id)}</h3>
           <p>{sequence.purpose}</p>
           <p className="progress-copy" style={{ color: percentColor(view.sequenceProgress[sequence.id]) }}>{formatSync(view.sequenceProgress[sequence.id])}</p>
           <ProgressBar value={view.sequenceProgress[sequence.id]} />
@@ -45,13 +48,16 @@ export default function Quests() {
           const current = view.goalCurrent[goal.id] ?? 0
           const pct = (current / goal.target) * 100
           return (
-            <Link key={goal.id} className="quest-link" to={`/quests/${goal.id}`}>
-              <p className="kicker">{goal.category} · {skillById(goal.skillPathId).name}</p>
-              <strong>{goal.title}</strong>
-              <p>{goal.target === 1 ? (current >= goal.target ? 'Complete' : 'Incomplete') : `${current} / ${goal.target} ${goal.unit}`}</p>
-              <p>{goal.xpReward} XP · {current >= goal.target ? 'Complete' : current > 0 ? 'In progress' : 'Not started'}</p>
-              <ProgressBar value={pct} />
-            </Link>
+            <div className="note-row" key={goal.id}>
+              <Link className="quest-link" to={`/quests/${goal.id}`}>
+                <p className="kicker">{goal.category} · {skillById(goal.skillPathId).name}</p>
+                <strong>{goal.title}</strong>
+                <p>{goal.target === 1 ? (current >= goal.target ? 'Complete' : 'Incomplete') : `${current} / ${goal.target} ${goal.unit}`}</p>
+                <p>{goal.xpReward} XP · {current >= goal.target ? 'Complete' : current > 0 ? 'In progress' : 'Not started'}</p>
+                <ProgressBar value={pct} />
+              </Link>
+              <TaskNote id={goal.id} />
+            </div>
           )
         })}
       </section>

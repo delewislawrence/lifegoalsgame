@@ -25,6 +25,7 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: 'index.html',
+        globIgnores: ['**/*.{wasm,bin}', '**/web-llm-*.js'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -47,6 +48,15 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('@mlc-ai/web-llm')) return 'web-llm'
+        },
+      },
+    },
+  },
   test: {
     environment: 'node',
     globals: true,

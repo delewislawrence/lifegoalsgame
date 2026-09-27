@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom'
 import { CONTRACTS, GOAL_BY_ID, isChecklist, sequenceById, skillById } from '../game/catalog'
 import { useGame } from '../state/GameProvider'
 import ProgressBar from '../components/ProgressBar'
+import TaskNote from '../components/TaskNote'
 
 export default function QuestDetail() {
   const { goalId = '' } = useParams()
@@ -26,7 +27,10 @@ export default function QuestDetail() {
     <>
       <Link className="meta" to="/quests">Quest log</Link>
       <p className="kicker">{goal.category}</p>
-      <h1>{goal.title}</h1>
+      <div className="note-row">
+        <h1>{goal.title}</h1>
+        <TaskNote id={goal.id} />
+      </div>
       <p>{goal.description}</p>
       <p className="progress-copy">
         {goal.target === 1 ? (done ? 'Complete' : 'Incomplete') : `${current} / ${goal.target} ${goal.unit}`}
@@ -40,21 +44,23 @@ export default function QuestDetail() {
         {goal.subtasks.map((step) => {
           const complete = checklist ? doneIds.has(step.id) : current >= (step.at ?? goal.target)
           return (
-            <button
-              key={step.id}
-              type="button"
-              className={complete ? 'step done' : 'step'}
-              onClick={() => {
-                if (checklist) {
-                  dispatch({ type: 'toggle-subtask', goalId: goal.id, subtaskId: step.id, date: today, at: new Date().toISOString() })
-                  return
-                }
-                if (step.at && step.at > current) log(step.at - current)
-              }}
-            >
-              <span>{step.title}</span>
-              <span>{complete ? 'Done' : checklist ? 'Mark' : 'Reach'}</span>
-            </button>
+            <div className="note-row" key={step.id}>
+              <button
+                type="button"
+                className={complete ? 'step done' : 'step'}
+                onClick={() => {
+                  if (checklist) {
+                    dispatch({ type: 'toggle-subtask', goalId: goal.id, subtaskId: step.id, date: today, at: new Date().toISOString() })
+                    return
+                  }
+                  if (step.at && step.at > current) log(step.at - current)
+                }}
+              >
+                <span>{step.title}</span>
+                <span>{complete ? 'Done' : checklist ? 'Mark' : 'Reach'}</span>
+              </button>
+              <TaskNote id={`${goal.id}:${step.id}`} />
+            </div>
           )
         })}
       </div>

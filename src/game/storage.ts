@@ -11,6 +11,7 @@ export function normalizeSave(save: Save): Save {
     goalStatus: save.goalStatus && typeof save.goalStatus === 'object' ? save.goalStatus : {},
     customGoals: Array.isArray(save.customGoals) ? save.customGoals : [],
     finance: save.finance?.entries && save.finance.template ? save.finance : emptyFinance(),
+    notes: save.notes && typeof save.notes === 'object' ? save.notes : {},
   }
 }
 

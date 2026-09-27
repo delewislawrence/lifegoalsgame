@@ -194,6 +194,7 @@ export interface Save {
   goalStatus: Record<string, GoalStatus>
   customGoals: CustomGoal[]
   finance: FinanceState
+  notes: Record<string, string>
 }
 
 export interface LevelInfo {

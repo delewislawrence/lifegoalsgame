@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { formatSync, percentColor } from '../game/formulas'
 import HermeticField from './HermeticField'
+import { levelTitle, useThemeId } from '../settings/names'
 import { useGame } from '../state/GameProvider'
 
 const LINKS = [
@@ -12,10 +13,12 @@ const LINKS = [
   ['/review', 'Review'],
   ['/progress', 'Progress'],
   ['/profile', 'Profile'],
+  ['/settings', 'Settings'],
 ] as const
 
 export default function Layout() {
   const { view, toasts, storageError } = useGame()
+  const theme = useThemeId()
   return (
     <>
       <HermeticField />
@@ -28,7 +31,7 @@ export default function Layout() {
         {storageError ? <p className="warning">{storageError}</p> : null}
         <p className="stats">
           <span>{view.streak} day streak</span>
-          <span>{view.level.title}</span>
+          <span>{levelTitle(theme, view.level.level)}</span>
           <span>{view.xp.toLocaleString('en-US')} XP</span>
           <span style={{ color: percentColor(view.sync) }}>{formatSync(view.sync)}</span>
           <span>Day {Math.max(0, view.campaignDay)}</span>

@@ -72,19 +72,28 @@ export function gradeDay(tasksCompleted: number, tasksExpected = DAY_TASKS): { s
   return { score, grade: GRADES[score] ?? 'Missed' }
 }
 
+export function parseJournal(raw: unknown, today: string): Journal | null {
+  if (!raw || typeof raw !== 'object') return null
+  const parsed = raw as Journal
+  if (parsed.version !== 1 || !Array.isArray(parsed.entries)) return null
+  return {
+    version: 1,
+    agendaDate: typeof parsed.agendaDate === 'string' && parsed.agendaDate ? parsed.agendaDate : today,
+    agenda: Array.isArray(parsed.agenda)
+      ? parsed.agenda.filter((item) => item && typeof item.goalId === 'string' && typeof item.subtaskId === 'string')
+      : [],
+    entries: parsed.entries.filter((entry) => entry && typeof entry.id === 'string' && typeof entry.date === 'string'),
+    adhoc: Array.isArray(parsed.adhoc)
+      ? parsed.adhoc.filter((task) => task && typeof task.id === 'string' && typeof task.title === 'string' && typeof task.date === 'string')
+      : [],
+  }
+}
+
 export function loadJournal(today: string): Journal {
   try {
     const raw = localStorage.getItem(JOURNAL_KEY)
     if (!raw) return emptyJournal(today)
-    const parsed = JSON.parse(raw) as Journal
-    if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.entries)) return emptyJournal(today)
-    return {
-      version: 1,
-      agendaDate: parsed.agendaDate || today,
-      agenda: Array.isArray(parsed.agenda) ? parsed.agenda : [],
-      entries: parsed.entries.filter((entry) => entry && typeof entry.id === 'string' && typeof entry.date === 'string'),
-      adhoc: Array.isArray(parsed.adhoc) ? parsed.adhoc.filter((task) => task && typeof task.id === 'string' && typeof task.title === 'string' && typeof task.date === 'string') : [],
-    }
+    return parseJournal(JSON.parse(raw), today) ?? emptyJournal(today)
   } catch {
     return emptyJournal(today)
   }

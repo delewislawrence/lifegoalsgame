@@ -4,6 +4,7 @@ import { formatSync, percentColor } from '../game/formulas'
 import type { SkillPathId } from '../game/types'
 import { useGame } from '../state/GameProvider'
 import ProgressBar from '../components/ProgressBar'
+import TaskNote from '../components/TaskNote'
 
 const IDS = new Set(['combat', 'stealth', 'eagle', 'economic', 'creator', 'brotherhood', 'intimacy', 'inner-temple', 'artisan', 'hidden-bureau', 'explorer', 'play', 'character'])
 
@@ -34,11 +35,14 @@ export default function SkillDetail() {
       {goals.map((goal) => {
         const current = view.goalCurrent[goal.id] ?? 0
         return (
-          <Link key={goal.id} className="quest-link" to={`/quests/${goal.id}`}>
-            <strong>{goal.title}</strong>
-            <p>{goal.target === 1 ? (current >= goal.target ? 'Complete' : 'Incomplete') : `${current} / ${goal.target} ${goal.unit}`}</p>
-            <ProgressBar value={(current / goal.target) * 100} />
-          </Link>
+          <div className="note-row" key={goal.id}>
+            <Link className="quest-link" to={`/quests/${goal.id}`}>
+              <strong>{goal.title}</strong>
+              <p>{goal.target === 1 ? (current >= goal.target ? 'Complete' : 'Incomplete') : `${current} / ${goal.target} ${goal.unit}`}</p>
+              <ProgressBar value={(current / goal.target) * 100} />
+            </Link>
+            <TaskNote id={goal.id} />
+          </div>
         )
       })}
     </>

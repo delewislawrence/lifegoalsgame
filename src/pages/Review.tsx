@@ -8,6 +8,8 @@ import { GRADE_SCORES, gradeName } from '../game/journal'
 import { CATEGORIES, allocate, babyStatus, categorySpent, money, monthKey, ratesFor, spanTotals } from '../game/finance'
 import { daysElapsedIn, domainProgress, paceSplit, periodSync } from '../game/reviews'
 import { dueReview, findReview, monthOf, quarterOf, reviewKey, weekOf, type DueReview } from '../game/periods'
+import { sequenceName, useThemeId } from '../settings/names'
+import type { ThemeId } from '../settings/prefs'
 import { useGame } from '../state/GameProvider'
 import ProgressBar from '../components/ProgressBar'
 import type { ReviewRecord } from '../game/types'
@@ -53,6 +55,7 @@ function rangeEvents(saveEvents: { type: string; date: string; contractId?: stri
 
 export default function Review() {
   const { save, view, today } = useGame()
+  const theme = useThemeId()
   const reviews = save.reviews ?? []
   const due = dueReview(save.startedAt, today, reviews, view.campaignDay)
   const [pick, setPick] = useState<DueReview | null>(null)
@@ -81,7 +84,7 @@ export default function Review() {
         {[...reviews].reverse().map((review) => (
           <button key={review.id} type="button" className="card" onClick={() => { setPastId(review.id); setPick(null) }}>
             <p className="kicker">{review.kind}</p>
-            <h3>{historyLabel(review)}</h3>
+            <h3>{historyLabel(review, theme)}</h3>
             {review.grade !== undefined ? <p>{review.grade} — {gradeName(review.grade)}</p> : null}
           </button>
         ))}
@@ -105,15 +108,16 @@ export default function Review() {
   }
 }
 
-function historyLabel(review: ReviewRecord): string {
+function historyLabel(review: ReviewRecord, theme: ThemeId): string {
   if (review.kind === 'weekly') return `${review.period.weekStart} — ${review.period.weekEnd}`
   if (review.kind === 'monthly') return `Month ${review.period.month}`
-  if (review.kind === 'quarterly') return SEQUENCES.find((sequence) => sequence.id === review.period.sequenceId)?.name ?? 'Sequence'
+  if (review.kind === 'quarterly') return review.period.sequenceId ? sequenceName(theme, review.period.sequenceId) : 'Sequence'
   return `Year ${review.period.campaign ?? 1}`
 }
 
 function ReviewForm({ due }: { due: DueReview }) {
   const { save, view, today, journal, dispatch } = useGame()
+  const theme = useThemeId()
   const existing = findReview(save.reviews ?? [], due.kind, due.period)
   const span = spanFor(save.startedAt, due)
   const [answers, setAnswers] = useState<Record<string, string>>(existing?.answers ?? {})
@@ -183,7 +187,7 @@ function ReviewForm({ due }: { due: DueReview }) {
       ) : null}
       {due.kind === 'quarterly' ? (
         <div className="section">
-          <p>Sequence {view.sequence.index} — {view.sequence.name} · Day {view.campaignDay} · <span style={{ color: percentColor(view.sync) }}>{formatSync(view.sync)}</span></p>
+          <p>Sequence {view.sequence.index} — {sequenceName(theme, view.sequence.id)} · Day {view.campaignDay} · <span style={{ color: percentColor(view.sync) }}>{formatSync(view.sync)}</span></p>
           {goals.map((goal) => (
             <article key={goal.id} className="card">
               <strong>{goal.title}</strong>
@@ -256,10 +260,11 @@ function FocusGoals({ title, ids }: { title: string; ids: string[] }) {
 }
 
 function PastReview({ review, onBack }: { review: ReviewRecord; onBack: () => void }) {
+  const theme = useThemeId()
   return (
     <section className="section">
       <button className="btn ghost" type="button" onClick={onBack}>Back</button>
-      <h2>{historyLabel(review)}</h2>
+      <h2>{historyLabel(review, theme)}</h2>
       {review.grade !== undefined ? <p className="seal">{review.grade} — {gradeName(review.grade)}</p> : null}
       {Object.entries(review.answers).map(([key, value]) => value ? <p key={key}><b>{key}</b> — {value}</p> : null)}
     </section>

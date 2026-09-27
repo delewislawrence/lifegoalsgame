@@ -31,6 +31,7 @@ interface GameApi {
   removeAdhoc: (id: string) => void
   deleteDay: (id: string) => void
   mergeDays: (entries: DayEntry[]) => void
+  replaceJournal: (journal: Journal) => void
 }
 
 const GameContext = createContext<GameApi | null>(null)
@@ -179,8 +180,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setJournal((current) => mergeJournal(current, entries))
   }
 
+  const replaceJournal = (next: Journal) => {
+    setJournal(next)
+  }
+
   return (
-    <GameContext.Provider value={{ save, view, today, journal, toasts, storageError, dispatch, submitDay, addAdhoc, toggleAdhoc, removeAdhoc, deleteDay, mergeDays }}>
+    <GameContext.Provider value={{ save, view, today, journal, toasts, storageError, dispatch, submitDay, addAdhoc, toggleAdhoc, removeAdhoc, deleteDay, mergeDays, replaceJournal }}>
       {children}
     </GameContext.Provider>
   )

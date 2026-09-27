@@ -6,10 +6,13 @@ import { dueReview } from '../game/periods'
 import { formatSync, percentColor } from '../game/formulas'
 import { stepDone } from '../game/schedule'
 import ProgressBar from '../components/ProgressBar'
+import TaskNote from '../components/TaskNote'
+import { levelTitle, sequenceName, useThemeId } from '../settings/names'
 import { useGame } from '../state/GameProvider'
 
 export default function Home() {
   const { save, view, today, journal, dispatch, submitDay, addAdhoc, toggleAdhoc, removeAdhoc } = useGame()
+  const theme = useThemeId()
   const todayEntry = journal.entries.find((entry) => entry.date === today)
   const due = dueReview(save.startedAt, today, save.reviews ?? [], view.campaignDay)
   const [reflection, setReflection] = useState(todayEntry?.reflection ?? '')
@@ -21,11 +24,11 @@ export default function Home() {
       <p className="sync-label">Synchronization</p>
       <p className="sync-value" style={{ color: percentColor(view.sync) }}>{formatSync(view.sync)}</p>
       <ProgressBar value={view.sync} />
-      <p className="sequence-line">Sequence {view.sequence.index} — {view.sequence.name}</p>
-      <p className="level-line">LEVEL {view.level.level} — {view.level.title.toUpperCase()}</p>
+      <p className="sequence-line">Sequence {view.sequence.index} — {sequenceName(theme, view.sequence.id)}</p>
+      <p className="level-line">LEVEL {view.level.level} — {levelTitle(theme, view.level.level).toUpperCase()}</p>
       <p className="meta">
         {view.level.nextXp
-          ? `${Math.max(0, view.level.nextXp - view.xp)} XP to ${view.level.nextTitle}`
+          ? `${Math.max(0, view.level.nextXp - view.xp)} XP to ${levelTitle(theme, view.level.level + 1)}`
           : 'Level complete'}
       </p>
       <p className="streak">{view.streak} DAY SYNCHRONIZATION STREAK</p>
@@ -78,10 +81,13 @@ export default function Home() {
             if (!goal || !step) return null
             const done = stepDone(save.events, item.goalId, item.subtaskId, view.goalCurrent[item.goalId] ?? 0)
             return (
-              <Link key={`${item.goalId}-${item.subtaskId}`} className={done ? 'quest-link is-done' : 'quest-link'} to={`/quests/${item.goalId}`}>
-                <p className="kicker">{done ? 'Done' : 'Next'} · {goal.title}</p>
-                <strong>{step.title}</strong>
-              </Link>
+              <div key={`${item.goalId}-${item.subtaskId}`} className="note-row">
+                <Link className={done ? 'quest-link is-done' : 'quest-link'} to={`/quests/${item.goalId}`}>
+                  <p className="kicker">{done ? 'Done' : 'Next'} · {goal.title}</p>
+                  <strong>{step.title}</strong>
+                </Link>
+                <TaskNote id={`${item.goalId}:${item.subtaskId}`} />
+              </div>
             )
           })}
           <h2 className="section">Bonus tasks</h2>

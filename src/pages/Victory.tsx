@@ -7,10 +7,12 @@ import { addDays } from '../game/dates'
 import { babyStatus, money, spanTotals } from '../game/finance'
 import { domainProgress, extremeDomains } from '../game/reviews'
 import { findReview } from '../game/periods'
+import { levelTitle, sequenceName, useThemeId } from '../settings/names'
 import { useGame } from '../state/GameProvider'
 
 export default function Victory() {
   const { save, view, today, journal, dispatch } = useGame()
+  const theme = useThemeId()
   const [confirm, setConfirm] = useState(false)
   const [memories, setMemories] = useState('')
   const [became, setBecame] = useState('')
@@ -37,7 +39,7 @@ export default function Victory() {
   const sequenceScores = SEQUENCES.map((sequence) => {
     const rows = goals.filter((goal) => goal.sequenceId === sequence.id)
     const value = rows.length === 0 ? 0 : rows.filter(done).length / rows.length
-    return { name: sequence.name, value }
+    return { name: sequenceName(theme, sequence.id), value }
   })
   const hardest = Math.min(...sequenceScores.map((row) => row.value))
   const hardNames = sequenceScores.filter((row) => row.value === hardest).map((row) => row.name)
@@ -82,7 +84,7 @@ export default function Victory() {
         <p>Skills moved: {skillNames.length} paths.</p>
         <p>Relationships: {relationships.map((goal) => goal.title).join(', ') || 'none'}.</p>
         <p>Achievements: {ACHIEVEMENTS.filter((item) => save.achievementUnlocks[item.id]).map((item) => item.title).join(', ') || 'none'}.</p>
-        <p>Level {view.level.level} — {view.level.title}. Longest streak {view.bestStreak}.</p>
+        <p>Level {view.level.level} — {levelTitle(theme, view.level.level)}. Longest streak {view.bestStreak}.</p>
         <FinanceYear />
         <label>Best memories
           <textarea value={memories || existing?.answers.memories || ''} onChange={(event) => setMemories(event.target.value)} />

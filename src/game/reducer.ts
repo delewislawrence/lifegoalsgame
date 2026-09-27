@@ -31,6 +31,7 @@ export type Action =
   | { type: 'pay-debt'; debtId: string; amountCents: number; date: string; at: string }
   | { type: 'set-emergency'; amountCents: number; essentialCents: number; targetMonths: number; at: string; date: string }
   | { type: 'clear-debts'; at: string; date: string }
+  | { type: 'set-note'; id: string; text: string }
 
 function uid(): string {
   return crypto.randomUUID()
@@ -55,6 +56,7 @@ export function createSave(now = new Date()): Save {
     goalStatus: {},
     customGoals: [],
     finance: emptyFinance(),
+    notes: {},
   }
 }
 
@@ -287,6 +289,13 @@ export function reduce(save: Save, action: Action): Save {
         finance = addEntry(finance, { id: uid(), type: 'expense', amountCents: delta, date: action.date, note: 'Emergency fund', categoryId: 'emergency-fund' })
       }
       return commitFinance(save, finance, { id: uid(), type: 'emergency-update', at: action.at, date: action.date, xp: 5, amount: action.amountCents })
+    }
+    case 'set-note': {
+      const notes = { ...save.notes }
+      const text = action.text
+      if (text.trim()) notes[action.id] = text
+      else delete notes[action.id]
+      return { ...save, notes }
     }
     case 'clear-debts': {
       return commitFinance(save, { ...save.finance, baby: { ...save.finance.baby, step2Clear: true } }, {
